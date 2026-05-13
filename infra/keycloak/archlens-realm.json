@@ -1,0 +1,132 @@
+{
+  "realm": "archlens",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "resetPasswordAllowed": true,
+  "editUsernameAllowed": false,
+  "bruteForceProtected": true,
+  "roles": {
+    "realm": [
+      {
+        "name": "admin",
+        "description": "Platform administrator"
+      },
+      {
+        "name": "architect",
+        "description": "Can run analyses, view reports, manage ADRs"
+      },
+      {
+        "name": "viewer",
+        "description": "Read-only access to projects and reports"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "archlens-api",
+      "enabled": true,
+      "publicClient": false,
+      "bearerOnly": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false
+    },
+    {
+      "clientId": "archlens-frontend",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": ["http://localhost:3000/*"],
+      "webOrigins": ["http://localhost:3000"],
+      "defaultClientScopes": ["openid", "profile", "email"],
+      "protocolMappers": [
+        {
+          "name": "tenant-id-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "tenant_id",
+            "claim.name": "tenant_id",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "jsonType.label": "String"
+          }
+        },
+        {
+          "name": "realm-roles-mapper",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-realm-role-mapper",
+          "config": {
+            "multivalued": "true",
+            "claim.name": "realm_roles",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "jsonType.label": "String"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "admin@archlens.dev",
+      "email": "admin@archlens.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Admin",
+      "lastName": "ArchLens",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "admin123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["admin", "architect"]
+    },
+    {
+      "username": "architect@archlens.dev",
+      "email": "architect@archlens.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Architect",
+      "lastName": "User",
+      "attributes": {
+        "tenant_id": ["tenant-1"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "arch123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["architect"]
+    },
+    {
+      "username": "viewer@archlens.dev",
+      "email": "viewer@archlens.dev",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Viewer",
+      "lastName": "User",
+      "attributes": {
+        "tenant_id": ["tenant-2"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "view123",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["viewer"]
+    }
+  ]
+}

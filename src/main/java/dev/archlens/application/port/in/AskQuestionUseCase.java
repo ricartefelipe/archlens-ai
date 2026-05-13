@@ -6,5 +6,5 @@ import dev.archlens.domain.model.Question;
 
 public interface AskQuestionUseCase {
 
-    Question ask(UUID analysisId, String questionText);
+    Question ask(UUID projectId, UUID analysisId, String questionText);
 }

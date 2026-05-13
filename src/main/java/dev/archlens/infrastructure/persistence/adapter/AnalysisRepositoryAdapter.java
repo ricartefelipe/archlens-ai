@@ -64,4 +64,12 @@ public class AnalysisRepositoryAdapter implements AnalysisRepositoryPort {
         return repository.findByProjectIdAndId(projectId, analysisId)
                 .map(mapper::toDomain);
     }
+
+    @Override
+    public List<Analysis> findByProjectIdAndTenantId(UUID projectId, String tenantId) {
+        return repository.list("projectId = ?1 and tenantId = ?2 order by createdAt desc", projectId, tenantId)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
+    }
 }

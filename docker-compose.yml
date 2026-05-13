@@ -32,7 +32,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
     container_name: archlens-keycloak
-    command: start-dev
+    command: start-dev --import-realm
     environment:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
@@ -43,9 +43,28 @@ services:
       KC_DB_SCHEMA: keycloak
     ports:
       - "8180:8080"
+    volumes:
+      - ./infra/keycloak/archlens-realm.json:/opt/keycloak/data/import/archlens-realm.json:ro
     depends_on:
       postgres:
         condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: archlens-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: archlens
+      RABBITMQ_DEFAULT_PASS: archlens
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   worker-ai:
     build:
@@ -71,4 +90,5 @@ services:
 volumes:
   pgdata:
   redisdata:
+  rabbitmqdata:
   workerdata:

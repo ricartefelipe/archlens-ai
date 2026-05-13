@@ -1,9 +1,11 @@
 package dev.archlens.interfaces.rest;
 
+import java.util.List;
 import java.util.UUID;
 
 import dev.archlens.application.port.in.CreateAnalysisUseCase;
 import dev.archlens.application.port.in.GetAnalysisUseCase;
+import dev.archlens.application.port.in.ListAnalysesForProjectUseCase;
 import dev.archlens.domain.model.Analysis;
 import dev.archlens.interfaces.rest.dto.response.AnalysisResponse;
 import dev.archlens.interfaces.rest.mapper.AnalysisDtoMapper;
@@ -27,15 +29,26 @@ public class AnalysisResource {
 
     private final CreateAnalysisUseCase createUseCase;
     private final GetAnalysisUseCase getUseCase;
+    private final ListAnalysesForProjectUseCase listUseCase;
     private final AnalysisDtoMapper mapper;
 
     @Inject
     public AnalysisResource(CreateAnalysisUseCase createUseCase,
                             GetAnalysisUseCase getUseCase,
+                            ListAnalysesForProjectUseCase listUseCase,
                             AnalysisDtoMapper mapper) {
         this.createUseCase = createUseCase;
         this.getUseCase = getUseCase;
+        this.listUseCase = listUseCase;
         this.mapper = mapper;
+    }
+
+    @GET
+    public List<AnalysisResponse> list(@PathParam("projectId") UUID projectId) {
+        LOG.infof("Listing analyses for projectId=%s", projectId);
+        return listUseCase.listByProject(projectId).stream()
+                .map(mapper::toResponse)
+                .toList();
     }
 
     @POST
@@ -43,7 +56,7 @@ public class AnalysisResource {
         LOG.infof("Creating analysis for project: projectId=%s", projectId);
         Analysis analysis = createUseCase.create(projectId);
         AnalysisResponse response = mapper.toResponse(analysis);
-        return Response.status(Response.Status.CREATED).entity(response).build();
+        return Response.status(Response.Status.ACCEPTED).entity(response).build();
     }
 
     @GET

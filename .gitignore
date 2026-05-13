@@ -10,6 +10,9 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
+# Editor local (não versionar)
+.cursor/
+
 # IDE
 .idea/
 *.iml
@@ -30,6 +33,12 @@ Thumbs.db
 # Quarkus
 .quarkus/
 
-# Env
-.env
+# Next.js / Node (frontend)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.env*.local
+frontend/npm-debug.log*
+frontend/.turbo/
+
 *.env.local

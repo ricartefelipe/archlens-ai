@@ -10,6 +10,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import dev.archlens.application.port.in.AskQuestionUseCase;
+import dev.archlens.application.port.in.ListQuestionsForAnalysisUseCase;
 import dev.archlens.application.port.out.AnalysisRepositoryPort;
 import dev.archlens.application.port.out.LlmGateway;
 import dev.archlens.application.port.out.QuestionRepositoryPort;
@@ -22,7 +23,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
 @ApplicationScoped
-public class QuestionService implements AskQuestionUseCase {
+public class QuestionService implements AskQuestionUseCase, ListQuestionsForAnalysisUseCase {
 
     private static final Logger LOG = Logger.getLogger(QuestionService.class);
     private static final int RAG_MAX_CHUNKS = 5;
@@ -50,11 +51,15 @@ public class QuestionService implements AskQuestionUseCase {
 
     @Override
     @Transactional
-    public Question ask(UUID analysisId, String questionText) {
+    public Question ask(UUID projectId, UUID analysisId, String questionText) {
         String tenantId = tenantProvider.getCurrentTenantId();
 
-        Analysis analysis = analysisRepository.findById(analysisId)
+        Analysis analysis = analysisRepository.findByProjectIdAndId(projectId, analysisId)
                 .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+
+        if (!tenantId.equals(analysis.getTenantId())) {
+            throw new AnalysisNotFoundException(analysisId);
+        }
 
         LOG.infof("Processing question for analysis %s: %s", analysisId, questionText);
 
@@ -80,6 +85,18 @@ public class QuestionService implements AskQuestionUseCase {
                 ragContext.sources().size(), question.getId(), analysisId);
 
         return questionRepository.save(question);
+    }
+
+    @Override
+    @Transactional
+    public List<Question> list(UUID projectId, UUID analysisId) {
+        String tenantId = tenantProvider.getCurrentTenantId();
+        Analysis analysis = analysisRepository.findByProjectIdAndId(projectId, analysisId)
+                .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+        if (!tenantId.equals(analysis.getTenantId())) {
+            throw new AnalysisNotFoundException(analysisId);
+        }
+        return questionRepository.findByAnalysisIdAndTenantId(analysisId, tenantId);
     }
 
     private String buildEnrichedContext(Analysis analysis, RagContextPort.RagContext ragContext) {

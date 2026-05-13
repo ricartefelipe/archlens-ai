@@ -26,6 +26,15 @@ quarkus:
       methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
       headers: "*"
       exposed-headers: X-Correlation-Id
+    auth:
+      permission:
+        health:
+          paths: /q/*
+          policy: permit
+        api:
+          paths: /v1/*
+          policy: authenticated
+          auth-mechanism: bearer
 
   log:
     console:
@@ -45,9 +54,18 @@ quarkus:
   otel:
     enabled: false
 
+  oidc:
+    auth-server-url: http://localhost:8180/realms/archlens
+    client-id: archlens-api
+    tls:
+      verification: none
+    token:
+      issuer: any
+
   rest-client:
     worker-ai:
       url: http://localhost:8081
+
 
   micrometer:
     export:
@@ -56,6 +74,13 @@ quarkus:
 
 "%dev":
   quarkus:
+    oidc:
+      enabled: false
+    http:
+      auth:
+        permission:
+          api:
+            policy: permit
     log:
       console:
         json:
@@ -71,6 +96,13 @@ quarkus:
 
 "%test":
   quarkus:
+    oidc:
+      enabled: false
+    http:
+      auth:
+        permission:
+          api:
+            policy: permit
     log:
       console:
         json:
@@ -81,3 +113,35 @@ quarkus:
       password: archlens
       jdbc:
         url: jdbc:postgresql://localhost:5432/archlens
+
+rabbitmq-host: localhost
+rabbitmq-port: 5672
+rabbitmq-username: archlens
+rabbitmq-password: archlens
+
+mp:
+  messaging:
+    outgoing:
+      analysis-requests-out:
+        connector: smallrye-rabbitmq
+        exchange:
+          name: analysis-requests
+          type: fanout
+          durable: true
+          auto-delete: false
+          declare: true
+        content-type-override: application/json
+    incoming:
+      analysis-requests-in:
+        connector: smallrye-rabbitmq
+        exchange:
+          name: analysis-requests
+          type: fanout
+          durable: true
+          auto-delete: false
+          declare: true
+        queue:
+          name: analysis-requests-queue
+          durable: true
+          declare: true
+        content-type-override: application/json

@@ -1,5 +1,6 @@
 package dev.archlens.infrastructure.persistence.adapter;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -36,5 +37,14 @@ public class QuestionRepositoryAdapter implements QuestionRepositoryPort {
     public Optional<Question> findById(UUID id) {
         return repository.findByIdOptional(id)
                 .map(mapper::toDomain);
+    }
+
+    @Override
+    public List<Question> findByAnalysisIdAndTenantId(UUID analysisId, String tenantId) {
+        return repository.list("analysisId = ?1 and tenantId = ?2 order by createdAt asc",
+                        analysisId, tenantId)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 }
