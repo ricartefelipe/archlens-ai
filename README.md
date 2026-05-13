@@ -67,7 +67,7 @@ curl -X POST http://localhost:8080/v1/projects \
 curl http://localhost:8080/v1/projects -H "X-Tenant-Id: tenant-1"
 ```
 
-## Fase 9 — Inferência em produção (configuração)
+## Inferência em produção (configuração)
 
 O serviço Quarkus escolhe o adapter de `LlmGateway` via `archlens.llm.provider`:
 
@@ -112,7 +112,7 @@ Ao arranque, o worker faz (por defeito) um **probe**: gera um embedding e falha 
 
 **Mudar de dimensão em base existente:** requer `ALTER TABLE ... TYPE vector(N)` (com plano de **re-ingestão** ou embeddings incompatíveis) — não faz parte das migrations automáticas; faz backup antes.
 
-## Fase 10 — CI (GitHub Actions)
+## Integração contínua (GitHub Actions)
 
 No **push** ou **pull request** para `main` e `develop`, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa três jobs em paralelo:
 
