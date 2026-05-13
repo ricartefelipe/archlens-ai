@@ -1,0 +1,82 @@
+quarkus:
+  application:
+    name: archlens-ai
+
+  datasource:
+    db-kind: postgresql
+    username: archlens
+    password: archlens
+    jdbc:
+      url: jdbc:postgresql://localhost:5432/archlens
+      max-size: 16
+
+  hibernate-orm:
+    database:
+      generation: none
+    physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
+
+  liquibase:
+    migrate-at-start: true
+    change-log: db/changelog/db.changelog-master.yaml
+
+  http:
+    port: 8080
+    cors:
+      ~: true
+      origins: "*"
+      methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+      headers: "*"
+      exposed-headers: X-Correlation-Id
+
+  log:
+    console:
+      json:
+        ~: true
+    level: INFO
+    category:
+      "dev.archlens":
+        level: DEBUG
+    min-level: TRACE
+
+  smallrye-openapi:
+    info-title: ArchLens AI API
+    info-version: 0.1.0
+    info-description: Multi-tenant Architectural Intelligence Platform
+
+  opentelemetry:
+    enabled: false
+    tracer:
+      enabled: false
+
+  micrometer:
+    export:
+      prometheus:
+        enabled: true
+
+"%dev":
+  quarkus:
+    log:
+      console:
+        json:
+          ~: false
+        format: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%X{correlationId}] [%c{3.}] (%t) %s%e%n"
+      level: INFO
+      category:
+        "dev.archlens":
+          level: DEBUG
+    hibernate-orm:
+      log:
+        sql: true
+
+"%test":
+  quarkus:
+    log:
+      console:
+        json:
+          ~: false
+    datasource:
+      db-kind: postgresql
+      username: archlens
+      password: archlens
+      jdbc:
+        url: jdbc:postgresql://localhost:5432/archlens

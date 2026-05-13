@@ -1,0 +1,312 @@
+databaseChangeLog:
+  - changeSet:
+      id: "001-01-enable-pgvector"
+      author: archlens
+      changes:
+        - sql:
+            sql: CREATE EXTENSION IF NOT EXISTS vector;
+
+  - changeSet:
+      id: "001-02-create-projects"
+      author: archlens
+      changes:
+        - createTable:
+            tableName: projects
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_projects_tenant_id
+            tableName: projects
+            columns:
+              - column:
+                  name: tenant_id
+
+  - changeSet:
+      id: "001-03-create-analyses"
+      author: archlens
+      changes:
+        - createTable:
+            tableName: analyses
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: project_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: PENDING
+                  constraints:
+                    nullable: false
+              - column:
+                  name: summary
+                  type: text
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: analyses
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_analyses_project_id
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_analyses_project_id
+            tableName: analyses
+            columns:
+              - column:
+                  name: project_id
+        - createIndex:
+            indexName: idx_analyses_tenant_id
+            tableName: analyses
+            columns:
+              - column:
+                  name: tenant_id
+
+  - changeSet:
+      id: "001-04-create-architectural-risks"
+      author: archlens
+      changes:
+        - createTable:
+            tableName: architectural_risks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: analysis_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: category
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: severity
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: title
+                  type: varchar(512)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: description
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_path
+                  type: varchar(1024)
+              - column:
+                  name: evidence
+                  type: text
+              - column:
+                  name: suggestion
+                  type: text
+        - addForeignKeyConstraint:
+            baseTableName: architectural_risks
+            baseColumnNames: analysis_id
+            referencedTableName: analyses
+            referencedColumnNames: id
+            constraintName: fk_risks_analysis_id
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_risks_analysis_id
+            tableName: architectural_risks
+            columns:
+              - column:
+                  name: analysis_id
+
+  - changeSet:
+      id: "001-05-create-questions"
+      author: archlens
+      changes:
+        - createTable:
+            tableName: questions
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: analysis_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: question_text
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: answer_text
+                  type: text
+              - column:
+                  name: sources
+                  type: jsonb
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: questions
+            baseColumnNames: analysis_id
+            referencedTableName: analyses
+            referencedColumnNames: id
+            constraintName: fk_questions_analysis_id
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_questions_analysis_id
+            tableName: questions
+            columns:
+              - column:
+                  name: analysis_id
+
+  - changeSet:
+      id: "001-06-create-document-chunks"
+      author: archlens
+      comment: "Prepared for Phase 2 RAG ingestion"
+      changes:
+        - createTable:
+            tableName: document_chunks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: project_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_path
+                  type: varchar(1024)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: chunk_index
+                  type: int
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content
+                  type: text
+                  constraints:
+                    nullable: false
+              - column:
+                  name: embedding
+                  type: vector(1536)
+              - column:
+                  name: metadata
+                  type: jsonb
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: document_chunks
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_chunks_project_id
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_chunks_project_id
+            tableName: document_chunks
+            columns:
+              - column:
+                  name: project_id
+        - createIndex:
+            indexName: idx_chunks_tenant_id
+            tableName: document_chunks
+            columns:
+              - column:
+                  name: tenant_id
