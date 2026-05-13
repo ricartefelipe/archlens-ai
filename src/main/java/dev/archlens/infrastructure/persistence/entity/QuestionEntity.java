@@ -3,6 +3,9 @@ package dev.archlens.infrastructure.persistence.entity;
 import java.time.Instant;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -29,7 +32,8 @@ public class QuestionEntity {
     @Column(name = "answer_text", columnDefinition = "TEXT")
     private String answerText;
 
-    @Column(name = "sources", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "sources", columnDefinition = "jsonb")
     private String sources;
 
     @Column(name = "created_at", nullable = false, updatable = false)

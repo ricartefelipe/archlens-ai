@@ -11,8 +11,8 @@ quarkus:
       max-size: 16
 
   hibernate-orm:
-    database:
-      generation: none
+    schema-management:
+      strategy: validate
     physical-naming-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
 
   liquibase:
@@ -22,7 +22,6 @@ quarkus:
   http:
     port: 8080
     cors:
-      ~: true
       origins: "*"
       methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
       headers: "*"
@@ -31,7 +30,7 @@ quarkus:
   log:
     console:
       json:
-        ~: true
+        enabled: true
     level: INFO
     category:
       "dev.archlens":
@@ -43,10 +42,8 @@ quarkus:
     info-version: 0.1.0
     info-description: Multi-tenant Architectural Intelligence Platform
 
-  opentelemetry:
+  otel:
     enabled: false
-    tracer:
-      enabled: false
 
   micrometer:
     export:
@@ -58,7 +55,7 @@ quarkus:
     log:
       console:
         json:
-          ~: false
+          enabled: false
         format: "%d{yyyy-MM-dd HH:mm:ss,SSS} %-5p [%X{correlationId}] [%c{3.}] (%t) %s%e%n"
       level: INFO
       category:
@@ -73,7 +70,7 @@ quarkus:
     log:
       console:
         json:
-          ~: false
+          enabled: false
     datasource:
       db-kind: postgresql
       username: archlens

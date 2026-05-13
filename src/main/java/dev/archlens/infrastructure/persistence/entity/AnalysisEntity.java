@@ -36,7 +36,7 @@ public class AnalysisEntity {
     private String summary;
 
     @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "analysis_id")
+    @JoinColumn(name = "analysis_id", nullable = false)
     private List<ArchitecturalRiskEntity> risks = new ArrayList<>();
 
     @Column(name = "created_at", nullable = false, updatable = false)
