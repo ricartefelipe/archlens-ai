@@ -3,11 +3,14 @@ from uuid import UUID
 
 import structlog
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+from pydantic import BaseModel
 
+from app.analysis.rules import AdrSuggestion, AnalysisResult, RiskFinding
 from app.config import settings
 from app.domain.models import ChunkResult, ContextResponse, IngestRequest, IngestStatus, SearchRequest, SearchResult
 from app.embedding.gateway import create_embedding_gateway
 from app.persistence.repository import ChunkRepository
+from app.service.analysis import StaticAnalysisService
 from app.service.ingest import IngestService
 
 _LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
@@ -125,6 +128,35 @@ async def build_context(request: SearchRequest) -> ContextResponse:
         sources=search_result.results,
         total_chunks=len(search_result.results),
     )
+
+
+class AnalyzeRequest(BaseModel):
+    project_id: UUID
+    tenant_id: str
+
+
+class AdrRequest(BaseModel):
+    project_id: UUID
+    findings: list[RiskFinding] = []
+
+
+@app.post("/v1/analyze/{project_id}")
+async def analyze_project(project_id: UUID, request: AnalyzeRequest) -> AnalysisResult:
+    if request.project_id != project_id:
+        raise HTTPException(status_code=400, detail="project_id mismatch")
+
+    service = StaticAnalysisService()
+    result = await service.analyze_project(project_id, request.tenant_id)
+    log.info("analysis_completed", project_id=str(project_id), findings=len(result.findings))
+    return result
+
+
+@app.post("/v1/analyze/{project_id}/adrs")
+async def generate_adrs(project_id: UUID, request: AdrRequest) -> list[AdrSuggestion]:
+    service = StaticAnalysisService()
+    adrs = await service.generate_adrs(request.findings)
+    log.info("adrs_generated", project_id=str(project_id), count=len(adrs))
+    return adrs
 
 
 async def _run_ingest(request: IngestRequest) -> None:
