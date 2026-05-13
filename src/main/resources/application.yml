@@ -45,6 +45,10 @@ quarkus:
   otel:
     enabled: false
 
+  rest-client:
+    worker-ai:
+      url: http://localhost:8081
+
   micrometer:
     export:
       prometheus:

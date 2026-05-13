@@ -60,6 +60,37 @@ class ChunkRepository:
                     )
                 )
 
+    async def find_similar_with_scores(
+        self, project_id: UUID, embedding: list[float], limit: int = 5
+    ) -> list[tuple[DocumentChunk, float]]:
+        async with async_session_factory() as session:
+            distance_col = document_chunks.c.embedding.cosine_distance(embedding).label("distance")
+            stmt = (
+                select(document_chunks, distance_col)
+                .where(document_chunks.c.project_id == project_id)
+                .order_by(distance_col)
+                .limit(limit)
+            )
+            result = await session.execute(stmt)
+            rows = result.fetchall()
+
+            return [
+                (
+                    DocumentChunk(
+                        id=row.id,
+                        project_id=row.project_id,
+                        tenant_id=row.tenant_id,
+                        file_path=row.file_path,
+                        chunk_index=row.chunk_index,
+                        content=row.content,
+                        embedding=list(row.embedding) if row.embedding is not None else None,
+                        metadata=json.loads(row.metadata) if isinstance(row.metadata, str) else row.metadata,
+                    ),
+                    1.0 - float(row.distance),
+                )
+                for row in rows
+            ]
+
     async def find_similar(
         self, project_id: UUID, embedding: list[float], limit: int = 5
     ) -> list[DocumentChunk]:
@@ -81,7 +112,7 @@ class ChunkRepository:
                     file_path=row.file_path,
                     chunk_index=row.chunk_index,
                     content=row.content,
-                    embedding=list(row.embedding) if row.embedding else None,
+                    embedding=list(row.embedding) if row.embedding is not None else None,
                     metadata=json.loads(row.metadata) if row.metadata else None,
                 )
                 for row in rows

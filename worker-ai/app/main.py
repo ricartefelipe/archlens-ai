@@ -5,7 +5,9 @@ import structlog
 from fastapi import BackgroundTasks, FastAPI, HTTPException
 
 from app.config import settings
-from app.domain.models import IngestRequest, IngestStatus
+from app.domain.models import ChunkResult, ContextResponse, IngestRequest, IngestStatus, SearchRequest, SearchResult
+from app.embedding.gateway import create_embedding_gateway
+from app.persistence.repository import ChunkRepository
 from app.service.ingest import IngestService
 
 _LOG_LEVELS = {"DEBUG": 10, "INFO": 20, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
@@ -63,6 +65,66 @@ async def ingest_status(project_id: UUID) -> IngestStatus:
     if status is None:
         raise HTTPException(status_code=404, detail="No ingestion found for project")
     return status
+
+
+@app.post("/v1/search")
+async def semantic_search(request: SearchRequest) -> SearchResult:
+    gateway = create_embedding_gateway()
+    repository = ChunkRepository()
+
+    embeddings = await gateway.generate([request.query])
+    query_embedding = embeddings[0]
+
+    results = await repository.find_similar_with_scores(
+        project_id=request.project_id,
+        embedding=query_embedding,
+        limit=request.limit,
+    )
+
+    chunk_results = [
+        ChunkResult(
+            file_path=chunk.file_path,
+            chunk_index=chunk.chunk_index,
+            content=chunk.content,
+            score=score,
+            metadata=chunk.metadata,
+        )
+        for chunk, score in results
+    ]
+
+    log.info(
+        "search_completed",
+        project_id=str(request.project_id),
+        results=len(chunk_results),
+    )
+    return SearchResult(
+        project_id=request.project_id,
+        query=request.query,
+        results=chunk_results,
+        total_results=len(chunk_results),
+    )
+
+
+@app.post("/v1/context")
+async def build_context(request: SearchRequest) -> ContextResponse:
+    search_result = await semantic_search(request)
+
+    context_parts = []
+    for r in search_result.results:
+        context_parts.append(f"--- {r.file_path} (chunk {r.chunk_index}, score {r.score:.3f}) ---\n{r.content}\n")
+
+    assembled = "\n".join(context_parts)
+
+    log.info(
+        "context_built",
+        project_id=str(request.project_id),
+        chunks=len(search_result.results),
+    )
+    return ContextResponse(
+        context=assembled,
+        sources=search_result.results,
+        total_chunks=len(search_result.results),
+    )
 
 
 async def _run_ingest(request: IngestRequest) -> None:

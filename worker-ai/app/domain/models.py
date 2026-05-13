@@ -26,3 +26,30 @@ class IngestStatus(BaseModel):
     total_files: int
     processed_files: int
     total_chunks: int
+
+
+class SearchRequest(BaseModel):
+    project_id: UUID
+    query: str
+    limit: int = 5
+
+
+class ChunkResult(BaseModel):
+    file_path: str
+    chunk_index: int
+    content: str
+    score: float
+    metadata: dict | None = None
+
+
+class SearchResult(BaseModel):
+    project_id: UUID
+    query: str
+    results: list[ChunkResult]
+    total_results: int
+
+
+class ContextResponse(BaseModel):
+    context: str
+    sources: list[ChunkResult]
+    total_chunks: int
