@@ -1,19 +1,18 @@
-# Integração contínua: Maven/Quarkus, Next.js e worker Python.
+# Releases versionadas: confirma CI e publica GitHub Release ao empurrar tag semântica sobre o histórico acordado.
 
-name: CI
+name: Release
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+"
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -28,8 +27,7 @@ jobs:
           java-version: "21"
           cache: maven
 
-      - name: Testes e package (Quarkus)
-        run: chmod +x mvnw && ./mvnw -B clean verify -DskipITs=true
+      - run: chmod +x mvnw && ./mvnw -B clean verify -DskipITs=true
 
   frontend:
     name: Frontend (Next.js)
@@ -48,14 +46,12 @@ jobs:
 
       - run: npm ci
 
-      - name: Lint
-        run: npm run lint
+      - run: npm run lint
 
-      - name: Build
+      - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           NEXT_PUBLIC_API_URL: https://placeholder.local
-        run: npm run build
 
   worker-ai:
     name: Worker (Python)
@@ -72,11 +68,21 @@ jobs:
           cache: pip
           cache-dependency-path: worker-ai/requirements.txt
 
-      - name: Dependências
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
-      - name: Verificação de sintaxe / bytecode
-        run: python -m compileall -q app
+      - run: python -m compileall -q app
 
-      - name: Smoke import FastAPI
-        run: PYTHONPATH=. python -c "from app.main import app"
+      - run: PYTHONPATH=. python -c "from app.main import app"
+
+  github-release:
+    name: GitHub Release
+    needs: [backend, frontend, worker-ai]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
