@@ -8,6 +8,8 @@ public record ProjectResponse(
         String tenantId,
         String name,
         String description,
+        String status,
+        int fileCount,
         Instant createdAt,
         Instant updatedAt) {
 }

@@ -14,6 +14,7 @@ import dev.archlens.application.port.out.ProjectRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.model.Project;
+import dev.archlens.domain.model.ProjectStatus;
 
 @ApplicationScoped
 public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase, GetProjectUseCase {
@@ -36,6 +37,7 @@ public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase
         project.setTenantId(tenantId);
         project.setName(name);
         project.setDescription(description);
+        project.setStatus(ProjectStatus.CREATED);
         project.setCreatedAt(Instant.now());
         project.setUpdatedAt(Instant.now());
 

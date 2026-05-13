@@ -9,6 +9,8 @@ public class Project {
     private String tenantId;
     private String name;
     private String description;
+    private ProjectStatus status;
+    private int fileCount;
     private Instant createdAt;
     private Instant updatedAt;
 
@@ -45,6 +47,22 @@ public class Project {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public ProjectStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ProjectStatus status) {
+        this.status = status;
+    }
+
+    public int getFileCount() {
+        return fileCount;
+    }
+
+    public void setFileCount(int fileCount) {
+        this.fileCount = fileCount;
     }
 
     public Instant getCreatedAt() {

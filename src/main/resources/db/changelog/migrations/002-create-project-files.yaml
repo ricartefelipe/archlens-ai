@@ -1,0 +1,88 @@
+databaseChangeLog:
+  - changeSet:
+      id: "002-01-create-project-files"
+      author: archlens
+      changes:
+        - createTable:
+            tableName: project_files
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  defaultValueComputed: gen_random_uuid()
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: project_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_path
+                  type: varchar(1024)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_type
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: size_bytes
+                  type: bigint
+                  constraints:
+                    nullable: false
+              - column:
+                  name: content_hash
+                  type: varchar(128)
+              - column:
+                  name: created_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: project_files
+            baseColumnNames: project_id
+            referencedTableName: projects
+            referencedColumnNames: id
+            constraintName: fk_project_files_project_id
+            onDelete: CASCADE
+        - createIndex:
+            indexName: idx_project_files_project_id
+            tableName: project_files
+            columns:
+              - column:
+                  name: project_id
+        - createIndex:
+            indexName: idx_project_files_tenant_id
+            tableName: project_files
+            columns:
+              - column:
+                  name: tenant_id
+
+  - changeSet:
+      id: "002-02-add-status-to-projects"
+      author: archlens
+      changes:
+        - addColumn:
+            tableName: projects
+            columns:
+              - column:
+                  name: status
+                  type: varchar(32)
+                  defaultValue: CREATED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: file_count
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false

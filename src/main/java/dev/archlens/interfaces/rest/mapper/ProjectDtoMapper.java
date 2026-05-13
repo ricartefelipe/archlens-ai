@@ -15,6 +15,8 @@ public class ProjectDtoMapper {
                 domain.getTenantId(),
                 domain.getName(),
                 domain.getDescription(),
+                domain.getStatus() != null ? domain.getStatus().name() : null,
+                domain.getFileCount(),
                 domain.getCreatedAt(),
                 domain.getUpdatedAt());
     }

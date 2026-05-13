@@ -1,3 +1,5 @@
 databaseChangeLog:
   - include:
       file: db/changelog/migrations/001-initial-schema.yaml
+  - include:
+      file: db/changelog/migrations/002-create-project-files.yaml

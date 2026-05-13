@@ -27,6 +27,12 @@ public class ProjectEntity {
     @Column(name = "description")
     private String description;
 
+    @Column(name = "status", nullable = false)
+    private String status;
+
+    @Column(name = "file_count", nullable = false)
+    private int fileCount;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -82,6 +88,11 @@ public class ProjectEntity {
     public void setDescription(String description) {
         this.description = description;
     }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+    public int getFileCount() { return fileCount; }
+    public void setFileCount(int fileCount) { this.fileCount = fileCount; }
 
     public Instant getCreatedAt() {
         return createdAt;

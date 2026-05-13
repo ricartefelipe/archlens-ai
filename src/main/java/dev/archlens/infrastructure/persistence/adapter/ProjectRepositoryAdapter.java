@@ -29,6 +29,18 @@ public class ProjectRepositoryAdapter implements ProjectRepositoryPort {
     @Override
     @Transactional
     public Project save(Project project) {
+        if (project.getId() != null) {
+            Optional<ProjectEntity> existing = repository.findByIdOptional(project.getId());
+            if (existing.isPresent()) {
+                ProjectEntity entity = existing.get();
+                entity.setName(project.getName());
+                entity.setDescription(project.getDescription());
+                entity.setTenantId(project.getTenantId());
+                entity.setStatus(project.getStatus() != null ? project.getStatus().name() : entity.getStatus());
+                entity.setFileCount(project.getFileCount());
+                return mapper.toDomain(entity);
+            }
+        }
         ProjectEntity entity = mapper.toEntity(project);
         repository.persist(entity);
         return mapper.toDomain(entity);
