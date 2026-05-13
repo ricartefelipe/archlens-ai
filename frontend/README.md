@@ -1,4 +1,4 @@
-# ArchLens AI — interface web
+# ArchLens — interface web
 
 Aplicação Next.js do monólito `archlens-ai`. Consome a API Quarkus em `http://localhost:8080` (variável `NEXT_PUBLIC_API_URL`).
 

@@ -1,6 +1,6 @@
-# ArchLens AI
+# ArchLens
 
-Plataforma multi-tenant para análise arquitetural: combina recuperação de contexto em documentos (RAG), análise estática de artefatos (código, OpenAPI, migrations, Docker, pipelines) e relatórios com evidências rastreáveis.
+Plataforma multi-tenant para análise arquitetural: combina consulta contextual sobre documentos indexados, análise estática de artefatos (código, OpenAPI, migrations, Docker, pipelines) e relatórios com evidências rastreáveis.
 
 **Código:** [github.com/ricartefelipe/archlens-ai](https://github.com/ricartefelipe/archlens-ai) — branches `main` e `develop` mantidas em sincronia (fluxo de integração típico `develop` → `main`).
 
@@ -18,7 +18,7 @@ Plataforma multi-tenant para análise arquitetural: combina recuperação de con
 
 ## Arquitetura
 
-Estrutura em camadas (**domínio → aplicação → infraestrutura → interfaces**), com portas (hexagonal) para persistência, LLM, embeddings e integrações externas.
+Estrutura em camadas (**domínio → aplicação → infraestrutura → interfaces**), com portas (hexagonal) para persistência, inferência textual remota opcional, armazenamento de vetores de documentos e integrações externas.
 
 ```
 dev.archlens/
@@ -28,7 +28,7 @@ dev.archlens/
 └── interfaces/rest/    # JAX-RS, DTOs, filtros
 ```
 
-Os gateways de LLM e embedding em modo local usam implementações em memória adequadas a desenvolvimento; em produção substituem-se por adapters configurados (OpenAI, Ollama, etc.) sem alterar o núcleo de domínio.
+Os gateways de inferência e de vetores em modo local usam implementações em memória adequadas a desenvolvimento; em produção substituem-se por adaptadores configuráveis (`archlens.llm.*` e provedores do worker em `worker-ai`) sem alterar o núcleo de domínio.
 
 ## Pré-requisitos
 
@@ -74,22 +74,22 @@ O serviço Quarkus escolhe o adapter de `LlmGateway` via `archlens.llm.provider`
 | Valor | Comportamento |
 |--------|----------------|
 | `local` (padrão dev) | Respostas determinísticas (`LocalLlmGateway`), sem chamadas HTTP. |
-| `openai` | Chat Completions na API configurada (`ARCHLENS_LLM_OPENAI_*`). Sem API key válida, regressão automática para `local` com aviso em log. |
-| `ollama` | `/api/chat` no servidor Ollama (`ARCHLENS_LLM_OLLAMA_*`). |
+| `openai` | Completions de chat na URL e credenciais definidas por `ARCHLENS_LLM_OPENAI_*`. Sem chave válida, regressão automática para `local` com aviso em log. |
+| `ollama` | `/api/chat` no servidor indicado por `ARCHLENS_LLM_OLLAMA_*`. |
 
 Variáveis úteis:
 
 - `ARCHLENS_LLM_PROVIDER` — `local` \| `openai` \| `ollama`
 - `ARCHLENS_LLM_OPENAI_API_KEY` — obrigatória se `provider=openai`
-- `ARCHLENS_LLM_OPENAI_BASE_URL` — por defeito `https://api.openai.com` (compatível com proxies OpenAI-compatible)
-- `ARCHLENS_LLM_OPENAI_MODEL` — por defeito `gpt-4o-mini`
+- `ARCHLENS_LLM_OPENAI_BASE_URL` — URL base HTTPS do endpoint de completions compatível com o cliente embutido
+- `ARCHLENS_LLM_OPENAI_MODEL` — nome do modelo no endpoint configurado (`application.yml`/env)
 - `ARCHLENS_LLM_OLLAMA_BASE_URL`, `ARCHLENS_LLM_OLLAMA_MODEL`
 
 Perfil **`prod`**: `application.yml` lê datasource, OIDC, CORS e URL do worker-ai a partir de variáveis (`QUARKUS_DATASOURCE_*`, `OIDC_AUTH_SERVER_URL`, `CORS_ORIGINS`, `WORKER_AI_BASE_URL`).
 
-O **worker Python** continua a usar `EMBEDDING_PROVIDER` (`local`, `openai`, `ollama`) em `worker-ai` — alinhar dimensão do modelo com pgvector se mudares de `text-embedding-3-small` (1536).
+O **worker Python** continua a usar `EMBEDDING_PROVIDER` (`local`, `openai`, `ollama`) em `worker-ai` — alinhar sempre a dimensão do modelo escolhido com a coluna `vector(N)` na base (valor de referência padrão: 1536).
 
-### Embeddings: dimensão = contrato com o PostgreSQL
+### Vetores na base: dimensão = contrato com o PostgreSQL
 
 A coluna `document_chunks.embedding` é `vector(N)` na migration `001` com **N = 1536** por defeito.  
 O **worker** e o **backend** (para `LocalEmbeddingGateway`) usam a mesma referência:
@@ -100,17 +100,17 @@ O **worker** e o **backend** (para `LocalEmbeddingGateway`) usam a mesma referê
 | Backend Quarkus | `ARCHLENS_EMBEDDING_DIMENSION` → `archlens.embedding.dimension` |
 | Liquibase / BD | `vector(1536)` em `001` — alterar só com migration/migração deliberada |
 
-Ao arranque, o worker faz (por defeito) um **probe**: gera um embedding e falha se `len(vetor) ≠ EMBEDDING_DIMENSION`. Para desligar em dev: `EMBEDDING_DIMENSION_VERIFY=false`.
+Ao arranque, o worker faz (por defeito) um **probe**: materializa um vector de exemplo e falha se `len(vetor) ≠ EMBEDDING_DIMENSION`. Para desligar em dev: `EMBEDDING_DIMENSION_VERIFY=false`.
 
-**Modelos frequentes (referência):**
+**Identificadores de modelo frequentes vs. dimensão (referência operacional):**
 
-| Modelo / familia | Dimensão típica |
+| Identificador | Dimensão típica |
 |------------------|------------------|
-| OpenAI `text-embedding-3-small` | 1536 |
-| OpenAI `text-embedding-3-large` | 3072 |
-| Ollama `nomic-embed-text` | 768 |
+| Provedor `openai`: `text-embedding-3-small` | 1536 |
+| Provedor `openai`: `text-embedding-3-large` | 3072 |
+| Provedor `ollama`: `nomic-embed-text` | 768 |
 
-**Mudar de dimensão em base existente:** requer `ALTER TABLE ... TYPE vector(N)` (com plano de **re-ingestão** ou embeddings incompatíveis) — não faz parte das migrations automáticas; faz backup antes.
+**Mudar de dimensão em base existente:** requer `ALTER TABLE ... TYPE vector(N)` (com plano de **re-ingestão** ou vectores já persistidos tornam-se inválidos) — não faz parte das migrations automáticas; faz backup antes.
 
 ## Integração contínua (GitHub Actions)
 
@@ -122,7 +122,7 @@ No **push** ou **pull request** para `main` e `develop`, [`.github/workflows/ci.
 
 ## Decisões de arquitetura (resumo)
 
-1. **Portas para inferência e vetores**: `LlmGateway` com implementação local por defeito; **OpenAI/Ollama** via configuração (`archlens.llm.*`). `EmbeddingGateway` no JVM permanece local; embeddings reais no fluxo RAG são tratados pelo worker.
+1. **Portas para inferência e vetores**: `LlmGateway` com implementação local por defeito; adaptadores remotos via `archlens.llm.*` (`provider` `openai` ou `ollama`). `EmbeddingGateway` no JVM permanece local; a materialização de vetores no fluxo de recuperação trata-se no worker.
 2. **Multi-tenancy**: coluna `tenant_id`; em produção o tenant pode vir do token OIDC.
 3. **Schema**: Liquibase em YAML; Hibernate em modo validação alinhado ao Liquibase.
 
