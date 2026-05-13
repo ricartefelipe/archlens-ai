@@ -2,7 +2,14 @@
 
 Plataforma multi-tenant para análise arquitetural: combina consulta contextual sobre documentos indexados, análise estática de artefatos (código, OpenAPI, migrations, Docker, pipelines) e relatórios com evidências rastreáveis.
 
-**Código:** [github.com/ricartefelipe/archlens-ai](https://github.com/ricartefelipe/archlens-ai) — branches `main` e `develop` mantidas em sincronia (fluxo de integração típico `develop` → `main`).
+**Código:** [github.com/ricartefelipe/archlens-ai](https://github.com/ricartefelipe/archlens-ai)
+
+## Fluxo Git (Git Flow)
+
+- **`develop`**: integração contínua. Alterações chegam por **pull request** a partir de `feature/*`, `release/*` ou `hotfix/*`. Evita-se push direto nestes ramos protegidos.
+- **`main`**: estado estável, espelho de **`develop`** após cada entrega (exceto período pontual em que um `release/*` esteja em curso). Atualização apenas por **pull request**.
+- **Releases**: após merge em **`main`**, cria-se tag semântica `vMAJOR.MINOR.PATCH` nesse ramo; o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) volta a executar os mesmos gates do CI e publica uma **GitHub Release** com notas automáticas derivadas dos PRs.
+- **`feature/*`**, **`hotfix/*`** e **`release/*`** eliminados no remoto depois do merge (`git push origin --delete <ramo>`), para manter o repositório enxuto.
 
 ## Stack
 
