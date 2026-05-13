@@ -1,0 +1,82 @@
+# Fase 10 — integração contínua (Maven, Next.js, worker Python).
+
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (Maven / Quarkus)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Testes e package (Quarkus)
+        run: chmod +x mvnw && ./mvnw -B clean verify -DskipITs=true
+
+  frontend:
+    name: Frontend (Next.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          NEXT_PUBLIC_API_URL: https://placeholder.local
+        run: npm run build
+
+  worker-ai:
+    name: Worker (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: worker-ai
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: worker-ai/requirements.txt
+
+      - name: Dependências
+        run: pip install -r requirements.txt
+
+      - name: Verificação de sintaxe / bytecode
+        run: python -m compileall -q app
+
+      - name: Smoke import FastAPI
+        run: PYTHONPATH=. python -c "from app.main import app"

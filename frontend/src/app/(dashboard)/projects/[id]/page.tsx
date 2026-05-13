@@ -55,7 +55,12 @@ export default function ProjectDetailPage() {
     }
   }, [projectId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadData]);
 
   useEffect(() => {
     if (pollingIds.size === 0) return;

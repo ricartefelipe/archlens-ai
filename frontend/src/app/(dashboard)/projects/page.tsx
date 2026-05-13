@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, FolderOpen, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
-import clsx from 'clsx';
 import { listProjects, createProject } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
@@ -19,11 +18,7 @@ export default function ProjectsPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  useEffect(() => {
-    loadProjects();
-  }, []);
-
-  async function loadProjects() {
+  const loadProjects = useCallback(async () => {
     try {
       const data = await listProjects(getTenantId());
       setProjects(data);
@@ -32,7 +27,14 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadProjects();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadProjects]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

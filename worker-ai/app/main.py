@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from uuid import UUID
 
 import structlog
@@ -9,6 +10,7 @@ from app.analysis.rules import AdrSuggestion, AnalysisResult, RiskFinding
 from app.config import settings
 from app.domain.models import ChunkResult, ContextResponse, IngestRequest, IngestStatus, SearchRequest, SearchResult
 from app.embedding.gateway import create_embedding_gateway
+from app.embedding.startup_verify import verify_embedding_dimension_on_startup
 from app.persistence.repository import ChunkRepository
 from app.service.analysis import StaticAnalysisService
 from app.service.ingest import IngestService
@@ -29,7 +31,14 @@ structlog.configure(
 
 log = structlog.get_logger()
 
-app = FastAPI(title="ArchLens AI Worker", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await verify_embedding_dimension_on_startup()
+    yield
+
+
+app = FastAPI(title="ArchLens AI Worker", version="0.1.0", lifespan=lifespan)
 
 _ingest_statuses: dict[UUID, IngestStatus] = {}
 

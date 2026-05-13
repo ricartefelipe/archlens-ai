@@ -8,7 +8,7 @@ import { getAnalysis, listAdrs } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
 import { RiskCard } from '@/components/risk-card';
-import type { Analysis, Adr, ArchitecturalRisk } from '@/lib/types';
+import type { Analysis, Adr } from '@/lib/types';
 
 const severityOrder: Record<string, number> = {
   CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3,
@@ -53,7 +53,12 @@ export default function AnalysisDetailPage() {
     }
   }, [projectId, analysisId]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  useEffect(() => {
+    const t = window.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => window.clearTimeout(t);
+  }, [loadData]);
 
   useEffect(() => {
     if (!analysis) return;
@@ -72,7 +77,7 @@ export default function AnalysisDetailPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [analysis?.status, projectId, analysisId]);
+  }, [analysis?.status, projectId, analysisId]); // eslint-disable-line react-hooks/exhaustive-deps -- evita restart do interval em cada objeto analysis novo
 
   if (loading) {
     return (

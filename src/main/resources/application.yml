@@ -119,6 +119,19 @@ rabbitmq-port: 5672
 rabbitmq-username: archlens
 rabbitmq-password: archlens
 
+archlens:
+  llm:
+    provider: ${ARCHLENS_LLM_PROVIDER:local}
+    openai:
+      api-key: ${ARCHLENS_LLM_OPENAI_API_KEY:}
+      base-url: ${ARCHLENS_LLM_OPENAI_BASE_URL:https://api.openai.com}
+      model: ${ARCHLENS_LLM_OPENAI_MODEL:gpt-4o-mini}
+    ollama:
+      base-url: ${ARCHLENS_LLM_OLLAMA_BASE_URL:http://localhost:11434}
+      model: ${ARCHLENS_LLM_OLLAMA_MODEL:llama3.2}
+  embedding:
+    dimension: ${ARCHLENS_EMBEDDING_DIMENSION:1536}
+
 mp:
   messaging:
     outgoing:
@@ -145,3 +158,19 @@ mp:
           durable: true
           declare: true
         content-type-override: application/json
+
+"%prod":
+  quarkus:
+    datasource:
+      username: ${QUARKUS_DATASOURCE_USERNAME:archlens}
+      password: ${QUARKUS_DATASOURCE_PASSWORD:archlens}
+      jdbc:
+        url: ${QUARKUS_DATASOURCE_JDBC_URL:jdbc:postgresql://localhost:5432/archlens}
+    oidc:
+      auth-server-url: ${OIDC_AUTH_SERVER_URL:http://localhost:8180/realms/archlens}
+    http:
+      cors:
+        origins: ${CORS_ORIGINS:*}
+    rest-client:
+      worker-ai:
+        url: ${WORKER_AI_BASE_URL:http://localhost:8081}

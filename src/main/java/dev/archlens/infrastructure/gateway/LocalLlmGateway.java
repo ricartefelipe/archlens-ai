@@ -9,9 +9,7 @@ import dev.archlens.application.port.out.LlmGateway;
 import dev.archlens.application.port.out.LlmRiskFinding;
 import dev.archlens.domain.model.RiskCategory;
 import dev.archlens.domain.model.RiskSeverity;
-import jakarta.enterprise.context.ApplicationScoped;
 
-@ApplicationScoped
 public class LocalLlmGateway implements LlmGateway {
 
     private static final Logger LOG = Logger.getLogger(LocalLlmGateway.class);
