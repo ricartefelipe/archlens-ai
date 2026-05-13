@@ -2,6 +2,8 @@
 
 Plataforma multi-tenant para análise arquitetural: combina recuperação de contexto em documentos (RAG), análise estática de artefatos (código, OpenAPI, migrations, Docker, pipelines) e relatórios com evidências rastreáveis.
 
+**Código:** [github.com/ricartefelipe/archlens-ai](https://github.com/ricartefelipe/archlens-ai) — branches `main` e `develop` mantidas em sincronia (fluxo de integração típico `develop` → `main`).
+
 ## Stack
 
 | Camada | Tecnologia |
