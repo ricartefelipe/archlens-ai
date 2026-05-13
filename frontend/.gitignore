@@ -20,11 +20,6 @@
 # production
 /build
 
-# Ferramentas locais de editor
-.cursor/
-AGENTS.md
-CLAUDE.md
-
 # misc
 .DS_Store
 *.pem

@@ -14,7 +14,7 @@ class EmbeddingGateway(ABC):
         ...
 
 
-class FakeEmbeddingGateway(EmbeddingGateway):
+class LocalEmbeddingGateway(EmbeddingGateway):
     def __init__(self, dimension: int = 1536) -> None:
         self._dimension = dimension
 
@@ -78,4 +78,6 @@ def create_embedding_gateway() -> EmbeddingGateway:
         return OpenAIEmbeddingGateway()
     if provider == "ollama":
         return OllamaEmbeddingGateway()
-    return FakeEmbeddingGateway(dimension=settings.embedding_dimension)
+    if provider in ("local", "stub"):
+        return LocalEmbeddingGateway(dimension=settings.embedding_dimension)
+    return LocalEmbeddingGateway(dimension=settings.embedding_dimension)

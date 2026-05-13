@@ -3,7 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "postgresql://archlens:archlens@localhost:5432/archlens"
-    embedding_provider: str = "fake"
+    embedding_provider: str = "local"
     openai_api_key: str = ""
     ollama_base_url: str = "http://localhost:11434"
     embedding_model: str = "text-embedding-3-small"

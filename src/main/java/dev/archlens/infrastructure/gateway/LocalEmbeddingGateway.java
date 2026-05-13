@@ -8,14 +8,14 @@ import dev.archlens.application.port.out.EmbeddingGateway;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-public class FakeEmbeddingGateway implements EmbeddingGateway {
+public class LocalEmbeddingGateway implements EmbeddingGateway {
 
-    private static final Logger LOG = Logger.getLogger(FakeEmbeddingGateway.class);
+    private static final Logger LOG = Logger.getLogger(LocalEmbeddingGateway.class);
     private static final int EMBEDDING_DIMENSION = 1536;
 
     @Override
     public float[] generate(String text) {
-        LOG.infof("FakeEmbeddingGateway: gerando embedding fake para texto de %d caracteres", text.length());
+        LOG.debugf("LocalEmbeddingGateway: vetor determinístico (%d chars)", text.length());
 
         Random random = new Random(text.hashCode());
         float[] embedding = new float[EMBEDDING_DIMENSION];

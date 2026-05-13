@@ -73,7 +73,7 @@ services:
     container_name: archlens-worker-ai
     environment:
       DATABASE_URL: postgresql://archlens:archlens@postgres:5432/archlens
-      EMBEDDING_PROVIDER: fake
+      EMBEDDING_PROVIDER: local
       STORAGE_BASE_PATH: /data/projects
       LOG_LEVEL: INFO
       BACKEND_URL: http://host.docker.internal:8080

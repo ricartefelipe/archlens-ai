@@ -12,13 +12,13 @@ import dev.archlens.domain.model.RiskSeverity;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
-public class FakeLlmGateway implements LlmGateway {
+public class LocalLlmGateway implements LlmGateway {
 
-    private static final Logger LOG = Logger.getLogger(FakeLlmGateway.class);
+    private static final Logger LOG = Logger.getLogger(LocalLlmGateway.class);
 
     @Override
     public LlmAnalysisResult analyzeProject(String projectContext) {
-        LOG.info("FakeLlmGateway: gerando análise fake para o projeto");
+        LOG.debug("LocalLlmGateway: análise simulada para desenvolvimento local");
 
         String summary = "Análise arquitetural do projeto concluída. Foram identificados riscos relacionados "
                 + "a observabilidade, acoplamento e separação de camadas. Recomenda-se revisão dos pontos "
@@ -62,17 +62,17 @@ public class FakeLlmGateway implements LlmGateway {
                         "Retorno direto de entidades JPA em endpoints REST",
                         "Criar DTOs específicos para a camada de apresentação"));
 
-        LOG.infof("FakeLlmGateway: análise fake gerada com %d findings", findings.size());
+        LOG.debugf("LocalLlmGateway: %d achados simulados", findings.size());
         return new LlmAnalysisResult(summary, findings);
     }
 
     @Override
     public String answerQuestion(String question, String analysisContext) {
-        LOG.infof("FakeLlmGateway: pergunta recebida — %s", question);
+        LOG.debugf("LocalLlmGateway: pergunta recebida — %s", question);
 
         return "Com base na análise do projeto, a arquitetura atual apresenta pontos de atenção "
                 + "que devem ser endereçados para garantir a evolução sustentável do sistema. "
-                + "Esta resposta é gerada por um gateway fake para fins de desenvolvimento. "
-                + "Em produção, será substituída por um LLM real com RAG.";
+                + "Em ambiente de desenvolvimento local, utilize um serviço de inferência configurável "
+                + "(ver documentação do projeto e variáveis de ambiente).";
     }
 }

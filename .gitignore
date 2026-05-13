@@ -10,16 +10,8 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Editor local (não versionar)
+# Metadados opcionais do ambiente de trabalho (não versionar)
 .cursor/
-
-# Metadados de assistentes / editores (não versionar)
-AGENTS.md
-CLAUDE.md
-GEMINI.md
-COPILOT.md
-.cursorrules
-.cursorrules.md
 
 # IDE
 .idea/
