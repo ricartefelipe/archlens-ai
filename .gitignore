@@ -10,9 +10,6 @@ buildNumber.properties
 .mvn/timing.properties
 .mvn/wrapper/maven-wrapper.jar
 
-# Metadados opcionais do ambiente de trabalho (não versionar)
-.cursor/
-
 # IDE
 .idea/
 *.iml

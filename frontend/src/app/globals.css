@@ -45,6 +45,10 @@ body {
   color: var(--foreground);
 }
 
+.interactive-target {
+  cursor: pointer;
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--card); }
 ::-webkit-scrollbar-thumb { background: var(--secondary); border-radius: 3px; }

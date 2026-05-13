@@ -44,7 +44,7 @@ export function FileDropZone({ onFileSelected, accept = '.zip', loading = false 
       onDragLeave={() => setDragOver(false)}
       onDrop={handleDrop}
       className={clsx(
-        'flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
+        'interactive-target flex flex-col items-center justify-center gap-3 p-8 rounded-xl border-2 border-dashed transition-colors',
         dragOver ? 'border-primary bg-primary/5' : 'border-border hover:border-muted-foreground',
         loading && 'opacity-50 pointer-events-none'
       )}
