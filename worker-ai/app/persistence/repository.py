@@ -2,13 +2,13 @@ import json
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, delete, select
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy import Column, DateTime, Integer, MetaData, String, Table, Text, delete, func, select
+from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID, insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.config import settings
-from app.domain.models import DocumentChunk
+from app.domain.models import DocumentChunk, IngestStatus
 
 _async_url = settings.database_url.replace("postgresql://", "postgresql+psycopg://", 1)
 
@@ -29,6 +29,19 @@ document_chunks = Table(
     Column("embedding", Vector(settings.embedding_dimension)),
     Column("metadata", JSONB, nullable=True),
     Column("created_at", DateTime(timezone=True), server_default="now()"),
+    extend_existing=True,
+)
+
+ingestion_status = Table(
+    "ingestion_status",
+    metadata,
+    Column("project_id", PG_UUID(as_uuid=True), primary_key=True),
+    Column("tenant_id", String, nullable=False),
+    Column("status", String, nullable=False),
+    Column("total_files", Integer, nullable=False, default=0),
+    Column("processed_files", Integer, nullable=False, default=0),
+    Column("total_chunks", Integer, nullable=False, default=0),
+    Column("updated_at", DateTime(timezone=True), server_default=func.now()),
     extend_existing=True,
 )
 
@@ -117,3 +130,51 @@ class ChunkRepository:
                 )
                 for row in rows
             ]
+
+
+class IngestStatusRepository:
+    """Persiste o estado de ingestão por projeto, sobrevivendo a reinícios do worker."""
+
+    async def upsert(self, status: IngestStatus, tenant_id: str) -> None:
+        values = {
+            "project_id": status.project_id,
+            "tenant_id": tenant_id,
+            "status": status.status,
+            "total_files": status.total_files,
+            "processed_files": status.processed_files,
+            "total_chunks": status.total_chunks,
+            "updated_at": func.now(),
+        }
+        stmt = pg_insert(ingestion_status).values(**values)
+        stmt = stmt.on_conflict_do_update(
+            index_elements=[ingestion_status.c.project_id],
+            set_={
+                "tenant_id": stmt.excluded.tenant_id,
+                "status": stmt.excluded.status,
+                "total_files": stmt.excluded.total_files,
+                "processed_files": stmt.excluded.processed_files,
+                "total_chunks": stmt.excluded.total_chunks,
+                "updated_at": func.now(),
+            },
+        )
+        async with async_session_factory() as session:
+            async with session.begin():
+                await session.execute(stmt)
+
+    async def get(self, project_id: UUID) -> IngestStatus | None:
+        async with async_session_factory() as session:
+            stmt = select(ingestion_status).where(
+                ingestion_status.c.project_id == project_id
+            )
+            row = (await session.execute(stmt)).first()
+
+        if row is None:
+            return None
+
+        return IngestStatus(
+            project_id=row.project_id,
+            status=row.status,
+            total_files=row.total_files,
+            processed_files=row.processed_files,
+            total_chunks=row.total_chunks,
+        )

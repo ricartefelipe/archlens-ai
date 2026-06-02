@@ -66,6 +66,20 @@ jobs:
     defaults:
       run:
         working-directory: worker-ai
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: archlens
+          POSTGRES_USER: archlens
+          POSTGRES_PASSWORD: archlens
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U archlens"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -85,4 +99,6 @@ jobs:
         run: PYTHONPATH=. python -c "from app.main import app"
 
       - name: Testes (pytest)
+        env:
+          DATABASE_URL: postgresql://archlens:archlens@localhost:5432/archlens
         run: python -m pytest -q
