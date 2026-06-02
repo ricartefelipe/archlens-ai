@@ -76,7 +76,7 @@ class AdrGenerator:
                 if template:
                     adr = AdrSuggestion(
                         title=template["title"],
-                        context=template["context"],
+                        context=self._build_context(template["context"], category_findings),
                         decision=template["decision"],
                         consequences=template["consequences"],
                         related_findings=[f.id for f in category_findings],
@@ -85,3 +85,19 @@ class AdrGenerator:
 
         log.info("adrs_generated", count=len(adrs), categories=list(grouped.keys()))
         return adrs
+
+    def _build_context(self, base_context: str, findings: list[RiskFinding]) -> str:
+        """Enriquece o contexto do ADR com as evidências concretas detectadas,
+        tornando a decisão rastreável até os arquivos/achados que a motivaram."""
+        lines = []
+        for finding in findings:
+            location = finding.file_path or "local não identificado"
+            evidence = finding.evidence or finding.description
+            lines.append(f"- [{finding.severity.value}] {finding.title} ({location}): {evidence}")
+
+        evidence_block = "\n".join(lines)
+        return (
+            f"{base_context}\n\n"
+            f"Evidências detectadas ({len(findings)}):\n"
+            f"{evidence_block}"
+        )

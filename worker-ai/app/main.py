@@ -11,7 +11,7 @@ from app.config import settings
 from app.domain.models import ChunkResult, ContextResponse, IngestRequest, IngestStatus, SearchRequest, SearchResult
 from app.embedding.gateway import create_embedding_gateway
 from app.embedding.startup_verify import verify_embedding_dimension_on_startup
-from app.persistence.repository import ChunkRepository
+from app.persistence.repository import ChunkRepository, IngestStatusRepository
 from app.service.analysis import StaticAnalysisService
 from app.service.ingest import IngestService
 
@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ArchLens AI Worker", version="0.1.0", lifespan=lifespan)
 
-_ingest_statuses: dict[UUID, IngestStatus] = {}
+_ingest_status_repository = IngestStatusRepository()
 
 
 @app.get("/health")
@@ -64,7 +64,7 @@ async def trigger_ingest(
         processed_files=0,
         total_chunks=0,
     )
-    _ingest_statuses[project_id] = status
+    await _ingest_status_repository.upsert(status, request.tenant_id)
 
     background_tasks.add_task(_run_ingest, request)
     log.info("ingest_queued", project_id=str(project_id))
@@ -73,7 +73,7 @@ async def trigger_ingest(
 
 @app.get("/v1/ingest/{project_id}/status")
 async def ingest_status(project_id: UUID) -> IngestStatus:
-    status = _ingest_statuses.get(project_id)
+    status = await _ingest_status_repository.get(project_id)
     if status is None:
         raise HTTPException(status_code=404, detail="No ingestion found for project")
     return status
@@ -176,13 +176,16 @@ async def _run_ingest(request: IngestRequest) -> None:
             tenant_id=request.tenant_id,
             file_paths=request.file_paths,
         )
-        _ingest_statuses[request.project_id] = result
+        await _ingest_status_repository.upsert(result, request.tenant_id)
     except Exception:
         log.exception("ingest_failed", project_id=str(request.project_id))
-        _ingest_statuses[request.project_id] = IngestStatus(
-            project_id=request.project_id,
-            status="failed",
-            total_files=len(request.file_paths),
-            processed_files=0,
-            total_chunks=0,
+        await _ingest_status_repository.upsert(
+            IngestStatus(
+                project_id=request.project_id,
+                status="failed",
+                total_files=len(request.file_paths),
+                processed_files=0,
+                total_chunks=0,
+            ),
+            request.tenant_id,
         )
