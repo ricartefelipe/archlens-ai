@@ -23,19 +23,23 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Abrir ou reutilizar PR develop → main e fazer merge
+      - name: Abrir ou reutilizar PR develop → main e habilitar auto-merge
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
+
+          if [[ -z "${GH_TOKEN:-}" ]]; then
+            echo "::warning ::Secret SYNC_TOKEN ausente; sincronização automática desativada. Configure um PAT com contents:write e pull-requests:write."
+            exit 0
+          fi
+
           git fetch origin main develop
 
-          MAIN=$(git rev-parse origin/main)
-          DEV=$(git rev-parse origin/develop)
-
-          if [[ "$MAIN" == "$DEV" ]]; then
-            echo "main já aponta para o mesmo commit que develop."
+          AHEAD=$(git rev-list --count origin/main..origin/develop)
+          if [[ "$AHEAD" -eq 0 ]]; then
+            echo "main já contém todos os commits de develop; nada a sincronizar."
             exit 0
           fi
 
@@ -50,8 +54,5 @@ jobs:
           fi
 
           PR=$(gh pr list --repo "$REPOSITORY" --base main --head develop --state open --json number -q '.[0].number')
-          echo "Fazendo merge do PR #$PR"
-          gh pr merge "$PR" --repo "$REPOSITORY" --merge --admin || {
-            echo "::error ::gh pr merge falhou (permissões, reviews ou checks pendentes)."
-            exit 1
-          }
+          echo "Habilitando auto-merge do PR #$PR (mergeia quando os checks obrigatórios passarem)."
+          gh pr merge "$PR" --repo "$REPOSITORY" --merge --auto
