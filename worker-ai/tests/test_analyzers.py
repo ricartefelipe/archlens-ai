@@ -1,0 +1,102 @@
+from app.analysis.analyzers import (
+    AnalyzerFactory,
+    DockerAnalyzer,
+    JavaAnalyzer,
+    MigrationAnalyzer,
+    OpenApiAnalyzer,
+    PipelineAnalyzer,
+)
+from app.analysis.rules import RiskCategory, RiskSeverity
+
+
+def _categories(findings):
+    return {f.category for f in findings}
+
+
+def test_java_analyzer_flags_fat_controller():
+    content = """
+    @RestController
+    public class OrderController {
+        @Inject
+        private OrderRepository repository;
+
+        public String a() { if (x) {} return repository.findAll(); }
+        public String b() { if (y) {} }
+        public String c() { for (int i=0;i<3;i++) {} }
+        public String d() { while (z) {} }
+        public String e() {}
+        public String f() {}
+    }
+    """
+    findings = JavaAnalyzer().analyze("OrderController.java", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.EXCESSIVE_COUPLING in categories
+    assert RiskCategory.LAYER_SEPARATION_ISSUE in categories
+    assert findings, "esperava ao menos um achado para controller gordo"
+
+
+def test_java_analyzer_clean_class_has_no_findings():
+    content = """
+    public class Money {
+        private final long cents;
+        public Money(long cents) { this.cents = cents; }
+        public long cents() { return cents; }
+    }
+    """
+    assert JavaAnalyzer().analyze("Money.java", content) == []
+
+
+def test_migration_analyzer_flags_destructive_statements():
+    content = """
+    DROP TABLE legacy_orders;
+    ALTER TABLE users DROP COLUMN ssn;
+    DELETE FROM audit_log;
+    """
+    findings = MigrationAnalyzer().analyze("001.sql", content)
+
+    assert findings
+    assert all(f.category == RiskCategory.DESTRUCTIVE_MIGRATION for f in findings)
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_migration_analyzer_ignores_scoped_statements():
+    content = "DROP TABLE IF EXISTS tmp;\nDELETE FROM audit_log WHERE id = 1;\n"
+    assert MigrationAnalyzer().analyze("002.sql", content) == []
+
+
+def test_docker_analyzer_flags_missing_user_healthcheck_and_latest_tag():
+    content = "FROM python:latest\nRUN pip install fastapi\nCMD [\"python\", \"main.py\"]\n"
+    findings = DockerAnalyzer().analyze("Dockerfile", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.MISSING_HEALTH_CHECK in categories
+    assert RiskCategory.SECURITY_RISK in categories
+
+
+def test_openapi_analyzer_flags_missing_errors_and_security():
+    content = "openapi: 3.0.0\npaths:\n  /orders:\n    get:\n      responses:\n        '200':\n          description: ok\n"
+    findings = OpenApiAnalyzer().analyze("openapi.yaml", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.CONTRACT_VIOLATION in categories
+    assert RiskCategory.SECURITY_RISK in categories
+
+
+def test_pipeline_analyzer_flags_missing_stages():
+    content = "name: deploy\njobs:\n  build:\n    steps:\n      - run: echo build\n"
+    findings = PipelineAnalyzer().analyze(".github/workflows/deploy.yml", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.MISSING_TEST_COVERAGE in categories
+    assert RiskCategory.SECURITY_RISK in categories
+    assert RiskCategory.LACK_OF_OBSERVABILITY in categories
+
+
+def test_analyzer_factory_dispatch():
+    assert any(isinstance(a, JavaAnalyzer) for a in AnalyzerFactory.get_analyzers("App.java"))
+    assert any(isinstance(a, MigrationAnalyzer) for a in AnalyzerFactory.get_analyzers("001.sql"))
+    assert any(isinstance(a, DockerAnalyzer) for a in AnalyzerFactory.get_analyzers("Dockerfile"))
+    assert any(isinstance(a, OpenApiAnalyzer) for a in AnalyzerFactory.get_analyzers("api/openapi.yaml"))
+    assert any(isinstance(a, PipelineAnalyzer) for a in AnalyzerFactory.get_analyzers(".github/workflows/ci.yml"))
+    assert AnalyzerFactory.get_analyzers("README.md") == []
