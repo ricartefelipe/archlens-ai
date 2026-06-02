@@ -1,0 +1,55 @@
+databaseChangeLog:
+  - changeSet:
+      id: "004-01-create-ingestion-status"
+      author: archlens
+      comment: "Estado de ingestão persistido pelo worker-ai (sobrevive a reinícios)"
+      changes:
+        - createTable:
+            tableName: ingestion_status
+            columns:
+              - column:
+                  name: project_id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_files
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: processed_files
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_chunks
+                  type: int
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamptz
+                  defaultValueComputed: now()
+                  constraints:
+                    nullable: false
+        - createIndex:
+            indexName: idx_ingestion_status_tenant_id
+            tableName: ingestion_status
+            columns:
+              - column:
+                  name: tenant_id
