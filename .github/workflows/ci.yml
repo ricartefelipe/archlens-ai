@@ -73,10 +73,13 @@ jobs:
           cache-dependency-path: worker-ai/requirements.txt
 
       - name: Dependências
-        run: pip install -r requirements.txt
+        run: pip install -r requirements-dev.txt
 
       - name: Verificação de sintaxe / bytecode
         run: python -m compileall -q app
 
       - name: Smoke import FastAPI
         run: PYTHONPATH=. python -c "from app.main import app"
+
+      - name: Testes (pytest)
+        run: python -m pytest -q
