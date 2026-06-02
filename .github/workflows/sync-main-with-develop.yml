@@ -25,6 +25,7 @@ jobs:
 
       - name: Abrir ou reutilizar PR develop → main e fazer merge
         env:
+          GH_TOKEN: ${{ github.token }}
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
