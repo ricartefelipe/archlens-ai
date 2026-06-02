@@ -29,7 +29,7 @@ jobs:
           cache: maven
 
       - name: Testes e package (Quarkus)
-        run: chmod +x mvnw && ./mvnw -B clean verify -DskipITs=true
+        run: chmod +x mvnw && ./mvnw -B clean verify
 
   frontend:
     name: Frontend (Next.js)
