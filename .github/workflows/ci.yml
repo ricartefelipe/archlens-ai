@@ -51,6 +51,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Testes (Vitest)
+        run: npm test
+
       - name: Build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
