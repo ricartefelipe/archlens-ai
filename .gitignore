@@ -39,3 +39,4 @@ frontend/npm-debug.log*
 frontend/.turbo/
 
 *.env.local
+e2e/node_modules/

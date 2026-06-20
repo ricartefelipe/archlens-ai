@@ -19,9 +19,11 @@ import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.AnalysisNotFoundException;
 import dev.archlens.domain.model.Analysis;
 import dev.archlens.domain.model.Question;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
+@TenantScopedRls
 @ApplicationScoped
 public class QuestionService implements AskQuestionUseCase, ListQuestionsForAnalysisUseCase {
 

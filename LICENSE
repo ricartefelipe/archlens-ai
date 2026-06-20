@@ -1,0 +1,108 @@
+Licença Comercial ArchLens
+==========================
+
+Copyright (c) 2026 Felipe Ricarte Magalhães. Todos os direitos reservados.
+
+Este software ("ArchLens", doravante "Software") é um produto comercial
+licenciado, não software livre nem de código aberto. O uso do Software está
+condicionado à aquisição de uma licença válida e à aceitação integral dos
+termos abaixo.
+
+
+1. CONCESSÃO DE LICENÇA
+-----------------------
+Mediante o pagamento da licença, o autor concede ao comprador ("Licenciado")
+uma licença não exclusiva, perpétua, mundial e intransferível para:
+
+  a) usar, executar, estudar e modificar o código-fonte do Software;
+  b) incorporar o Software, no todo ou em parte, em produtos e aplicações
+     desenvolvidos pelo Licenciado, sejam próprios ou de clientes do
+     Licenciado, sem limite de número de produtos finais;
+  c) implantar os produtos finais resultantes em ambientes de produção;
+  d) operar o Software como um serviço (SaaS) ou ferramenta interna, inclusive
+     sob marca própria (white-label) do Licenciado.
+
+A licença é concedida a uma (1) pessoa física ou a uma (1) organização (com
+seus colaboradores diretos), conforme indicado no ato da compra.
+
+
+2. RESTRIÇÕES
+-------------
+O Licenciado NÃO pode:
+
+  a) revender, redistribuir, sublicenciar, publicar, doar ou disponibilizar
+     o código-fonte do Software (original ou modificado) como template,
+     boilerplate, starter kit, curso ou produto concorrente, isolado do
+     produto final do Licenciado;
+  b) tornar público o código-fonte do Software, inclusive em repositórios
+     abertos, de forma que permita a terceiros obtê-lo como base reutilizável;
+  c) remover ou alterar avisos de direitos autorais e de licença presentes
+     no Software;
+  d) transferir esta licença a terceiros sem autorização escrita do autor.
+
+A incorporação do Software em um produto final (inclusive um SaaS ou
+ferramenta sob marca própria) entregue ou disponibilizado a clientes é
+permitida (cláusula 1) e não constitui redistribuição proibida, desde que o
+código-fonte não seja entregue como template reutilizável separado do produto.
+
+
+3. PROPRIEDADE INTELECTUAL
+--------------------------
+O Software é e permanece de propriedade exclusiva do autor. Esta licença não
+transfere a titularidade do Software, apenas concede os direitos de uso
+descritos na cláusula 1.
+
+
+4. SERVIÇOS DE TERCEIROS
+------------------------
+O Software pode integrar-se opcionalmente a provedores externos de inferência
+e de embeddings (por exemplo, OpenAI ou Ollama). A contratação, os custos e a
+conformidade de uso desses serviços de terceiros são de responsabilidade
+exclusiva do Licenciado. O autor não fornece nem garante tais serviços.
+
+
+5. ATUALIZAÇÕES
+---------------
+A licença dá direito às correções e atualizações da versão vigente na data da
+compra. Novas versões maiores podem ser oferecidas separadamente, a critério
+do autor.
+
+
+6. AUSÊNCIA DE GARANTIA
+-----------------------
+O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA" ("AS IS"), SEM GARANTIAS
+DE QUALQUER NATUREZA, EXPRESSAS OU IMPLÍCITAS, INCLUINDO, MAS NÃO SE LIMITANDO
+A, GARANTIAS DE COMERCIABILIDADE, ADEQUAÇÃO A UM FIM ESPECÍFICO E NÃO
+VIOLAÇÃO. O LICENCIADO É O ÚNICO RESPONSÁVEL POR AVALIAR A ADEQUAÇÃO DO
+SOFTWARE AOS SEUS FINS E POR OPERÁ-LO EM PRODUÇÃO.
+
+
+7. LIMITAÇÃO DE RESPONSABILIDADE
+--------------------------------
+EM NENHUMA HIPÓTESE O AUTOR SERÁ RESPONSÁVEL POR QUAISQUER DANOS DIRETOS,
+INDIRETOS, INCIDENTAIS, ESPECIAIS, EXEMPLARES OU CONSEQUENCIAIS (INCLUINDO,
+SEM LIMITAÇÃO, PERDA DE LUCROS, INTERRUPÇÃO DE NEGÓCIOS OU PERDA DE DADOS)
+DECORRENTES DO USO OU DA IMPOSSIBILIDADE DE USO DO SOFTWARE, AINDA QUE
+ADVERTIDO DA POSSIBILIDADE DE TAIS DANOS.
+
+
+8. SUPORTE
+----------
+Esta licença não inclui suporte, implantação ou customização. Serviços de
+implantação assistida e adaptação podem ser contratados separadamente.
+
+
+9. RESCISÃO
+-----------
+Esta licença é rescindida automaticamente em caso de violação de qualquer de
+suas cláusulas, sem prejuízo das demais medidas cabíveis. Em caso de rescisão,
+o Licenciado deve cessar o uso e destruir as cópias do Software em sua posse,
+ressalvados os produtos finais já entregues a clientes de boa-fé.
+
+
+10. LEGISLAÇÃO APLICÁVEL
+------------------------
+Esta licença é regida pelas leis da República Federativa do Brasil.
+
+
+Contato para licenciamento e serviços: felipericartem@gmail.com

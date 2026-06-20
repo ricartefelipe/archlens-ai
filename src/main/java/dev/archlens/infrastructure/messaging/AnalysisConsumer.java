@@ -21,6 +21,7 @@ import dev.archlens.domain.model.AnalysisStatus;
 import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.RiskCategory;
 import dev.archlens.domain.model.RiskSeverity;
+import dev.archlens.infrastructure.persistence.rls.TenantRlsService;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -40,15 +41,19 @@ public class AnalysisConsumer {
     @ConfigProperty(name = "archlens.analysis.llm-fallback-enabled", defaultValue = "true")
     boolean llmFallbackEnabled;
 
+    private final TenantRlsService tenantRlsService;
+
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
                             AnalysisGateway analysisGateway,
                             LlmGateway llmGateway,
-                            AdrRepositoryPort adrRepository) {
+                            AdrRepositoryPort adrRepository,
+                            TenantRlsService tenantRlsService) {
         this.analysisRepository = analysisRepository;
         this.analysisGateway = analysisGateway;
         this.llmGateway = llmGateway;
         this.adrRepository = adrRepository;
+        this.tenantRlsService = tenantRlsService;
     }
 
     @Incoming("analysis-requests-in")
@@ -71,6 +76,8 @@ public class AnalysisConsumer {
             LOG.warnf("Analysis %s not found, skipping", event.analysisId());
             return;
         }
+
+        tenantRlsService.applyTenant(event.tenantId());
 
         try {
             analysis.setStatus(AnalysisStatus.PROCESSING);

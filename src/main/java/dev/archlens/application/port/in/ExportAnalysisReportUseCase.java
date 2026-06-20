@@ -8,9 +8,10 @@ public interface ExportAnalysisReportUseCase {
 
     enum ReportFormat {
         MARKDOWN,
-        JSON
+        JSON,
+        PDF
     }
 
-    record Report(String contentType, String fileName, String body) {
+    record Report(String contentType, String fileName, byte[] content) {
     }
 }

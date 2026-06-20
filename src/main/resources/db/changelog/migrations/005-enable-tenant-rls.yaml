@@ -1,0 +1,71 @@
+databaseChangeLog:
+  - changeSet:
+      id: "005-01-enable-rls"
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE analyses ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE architectural_risks ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE document_chunks ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE project_files ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE adrs ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE ingestion_status ENABLE ROW LEVEL SECURITY;
+
+  - changeSet:
+      id: "005-02-create-rls-policies"
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE POLICY tenant_access_projects ON projects
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_analyses ON analyses
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_risks ON architectural_risks
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_questions ON questions
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_chunks ON document_chunks
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_files ON project_files
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_adrs ON adrs
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_ingestion ON ingestion_status
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );

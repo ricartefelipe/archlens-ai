@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Layers } from 'lucide-react';
 import { keycloakEnabled, login, loginWithKeycloak } from '@/lib/auth';
+import { oidcEnabled, signInWithPkce } from '@/lib/oidc';
 
 export function LoginForm() {
   const router = useRouter();
@@ -15,7 +16,7 @@ export function LoginForm() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const useKeycloak = keycloakEnabled();
+  const useOidc = oidcEnabled();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -23,7 +24,11 @@ export function LoginForm() {
     setLoading(true);
 
     try {
-      if (useKeycloak) {
+      if (useOidc) {
+        await signInWithPkce();
+        return;
+      }
+      if (keycloakEnabled()) {
         await loginWithKeycloak(username, password);
       } else {
         const tenant = tenantId.trim() || 'default';
@@ -48,7 +53,11 @@ export function LoginForm() {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl p-6 space-y-4">
-        {useKeycloak ? (
+        {useOidc ? (
+          <p className="text-sm text-muted-foreground">
+            Autenticação via Keycloak (OIDC + PKCE). Você será redirecionado ao login seguro.
+          </p>
+        ) : keycloakEnabled() ? (
           <>
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">E-mail</label>
