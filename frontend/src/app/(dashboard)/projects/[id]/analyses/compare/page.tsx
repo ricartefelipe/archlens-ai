@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
-import { compareAnalyses } from '@/lib/api';
+import { ArrowLeft, Download, Loader2 } from 'lucide-react';
+import { compareAnalyses, downloadComparisonReport } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { AnalysisComparisonView } from '@/components/analysis-comparison-view';
 import type { AnalysisComparison } from '@/lib/types';
@@ -19,6 +19,7 @@ function CompareContent() {
   const [comparison, setComparison] = useState<AnalysisComparison | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<'markdown' | 'json' | 'pdf' | null>(null);
 
   useEffect(() => {
     if (!baseline || !current) {
@@ -69,11 +70,44 @@ function CompareContent() {
         Voltar ao projeto
       </button>
 
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Comparativo before/after</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Evolução arquitetural entre duas análises concluídas — ideal para follow-up consultivo.
-        </p>
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Comparativo before/after</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Evolução arquitetural entre duas análises concluídas — ideal para follow-up consultivo.
+          </p>
+        </div>
+        {comparison && baseline && current && (
+          <div className="flex flex-wrap gap-2">
+            {(['markdown', 'json', 'pdf'] as const).map((format) => (
+              <button
+                key={format}
+                type="button"
+                disabled={!!exporting}
+                onClick={async () => {
+                  setExporting(format);
+                  try {
+                    await downloadComparisonReport(
+                      getTenantId(),
+                      projectId,
+                      baseline,
+                      current,
+                      format
+                    );
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting === format
+                  ? 'Exportando...'
+                  : `Exportar ${format === 'markdown' ? 'Markdown' : format.toUpperCase()}`}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && (

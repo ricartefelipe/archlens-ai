@@ -165,3 +165,55 @@ export async function downloadReport(
   anchor.click();
   URL.revokeObjectURL(url);
 }
+
+export function comparisonReportUrl(
+  projectId: string,
+  baselineAnalysisId: string,
+  currentAnalysisId: string,
+  format: 'markdown' | 'json' | 'pdf' = 'markdown'
+): string {
+  const params = new URLSearchParams({
+    baseline: baselineAnalysisId,
+    current: currentAnalysisId,
+    format,
+  });
+  return `${API_BASE}/v1/projects/${projectId}/analyses/compare/report?${params}`;
+}
+
+export async function downloadComparisonReport(
+  tenantId: string,
+  projectId: string,
+  baselineAnalysisId: string,
+  currentAnalysisId: string,
+  format: 'markdown' | 'json' | 'pdf'
+): Promise<void> {
+  const headers: Record<string, string> = {
+    'X-Tenant-Id': tenantId,
+    'X-Correlation-Id': correlationId(),
+  };
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(
+    comparisonReportUrl(projectId, baselineAnalysisId, currentAnalysisId, format),
+    { headers }
+  );
+  if (!res.ok) {
+    throw new Error(`Export failed: ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="([^"]+)"/);
+  const fileName = match?.[1]
+    ?? `archlens-comparison.${format === 'json' ? 'json' : format === 'pdf' ? 'pdf' : 'md'}`;
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
