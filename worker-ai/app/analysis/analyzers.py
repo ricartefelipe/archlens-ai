@@ -427,6 +427,182 @@ class TerraformAnalyzer(BaseAnalyzer):
         return findings
 
 
+class KubernetesAnalyzer(BaseAnalyzer):
+    _KIND = re.compile(r"^kind:\s*(\w+)", re.MULTILINE | re.IGNORECASE)
+    _API_VERSION = re.compile(r"^apiVersion:\s*[\w./]+", re.MULTILINE)
+    _PRIVILEGED = re.compile(r"^\s*privileged:\s*true\b", re.MULTILINE | re.IGNORECASE)
+    _PRIV_ESCALATION = re.compile(
+        r"^\s*allowPrivilegeEscalation:\s*true\b", re.MULTILINE | re.IGNORECASE
+    )
+    _RUN_AS_ROOT = re.compile(r"^\s*runAsUser:\s*0\b", re.MULTILINE)
+    _HOST_NETWORK = re.compile(r"^\s*hostNetwork:\s*true\b", re.MULTILINE | re.IGNORECASE)
+    _HOST_PID = re.compile(r"^\s*hostPID:\s*true\b", re.MULTILINE | re.IGNORECASE)
+    _HOST_IPC = re.compile(r"^\s*hostIPC:\s*true\b", re.MULTILINE | re.IGNORECASE)
+    _LATEST_TAG = re.compile(r"^\s*image:\s*[\w./-]+:latest\b", re.MULTILINE | re.IGNORECASE)
+    _UNTAGGED_IMAGE = re.compile(
+        r"^\s*image:\s*(?!['\"])([a-z0-9._/-]+)\s*$", re.MULTILINE | re.IGNORECASE
+    )
+    _PLAIN_ENV_SECRET = re.compile(
+        r"^\s*-\s*name:\s*(?:.*(?:PASSWORD|SECRET|TOKEN|API_KEY).*\n\s*value:\s*['\"]?[^\s'\"${}]+)",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    _WORKLOAD_KINDS = {"deployment", "statefulset", "daemonset", "pod", "job", "cronjob"}
+
+    @staticmethod
+    def matches_path(file_path: str) -> bool:
+        lower = file_path.lower()
+        if not lower.endswith((".yml", ".yaml")):
+            return False
+        markers = ("k8s/", "kubernetes/", "helm/", "deploy/", "manifests/", "charts/")
+        return any(marker in lower for marker in markers)
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        if not self._is_kubernetes_manifest(file_path, content):
+            return []
+
+        findings: list[RiskFinding] = []
+        kind = self._kind_name(content)
+
+        if self._PRIVILEGED.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Container privilegiado",
+                description="privileged: true concede acesso amplo ao host e quebra isolamento.",
+                file_path=file_path,
+                evidence="privileged: true",
+                suggestion="Remover privileged ou isolar em node pool dedicado com política explícita",
+            ))
+
+        if self._PRIV_ESCALATION.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Escalonamento de privilégio permitido",
+                description="allowPrivilegeEscalation: true aumenta superfície de ataque.",
+                file_path=file_path,
+                evidence="allowPrivilegeEscalation: true",
+                suggestion="Definir allowPrivilegeEscalation: false no securityContext",
+            ))
+
+        if self._RUN_AS_ROOT.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Container executando como root",
+                description="runAsUser: 0 executa processos como root dentro do pod.",
+                file_path=file_path,
+                evidence="runAsUser: 0",
+                suggestion="Usar runAsNonRoot: true e runAsUser > 0",
+            ))
+
+        if self._HOST_NETWORK.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Pod com hostNetwork",
+                description="hostNetwork: true expõe rede do host ao pod.",
+                file_path=file_path,
+                evidence="hostNetwork: true",
+                suggestion="Usar ClusterIP/NodePort/Ingress em vez de hostNetwork",
+            ))
+
+        if self._HOST_PID.search(content) or self._HOST_IPC.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.MEDIUM,
+                title="Pod compartilhando namespace do host",
+                description="hostPID/hostIPC facilitam escape de container e inspeção de processos.",
+                file_path=file_path,
+                evidence="hostPID ou hostIPC habilitado",
+                suggestion="Desabilitar hostPID/hostIPC salvo requisito explícito de observabilidade",
+            ))
+
+        for match in self._LATEST_TAG.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.MEDIUM,
+                title="Imagem container com tag :latest",
+                description="Tag latest impede reprodutibilidade e rastreio de vulnerabilidades.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Fixar digest ou tag semver da imagem",
+            ))
+
+        for match in self._UNTAGGED_IMAGE.finditer(content):
+            image = match.group(1)
+            if ":" in image or "@" in image:
+                continue
+            findings.append(RiskFinding(
+                category=RiskCategory.CONTRACT_VIOLATION,
+                severity=RiskSeverity.MEDIUM,
+                title="Imagem container sem tag",
+                description="Imagem sem tag explícita depende do default do registry (:latest).",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Especificar tag ou digest da imagem",
+            ))
+
+        for match in self._PLAIN_ENV_SECRET.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Segredo em variável de ambiente plain text",
+                description="Credenciais no manifesto YAML ficam expostas em etcd e logs.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Migrar para Secret + secretKeyRef ou External Secrets Operator",
+            ))
+
+        if kind in self._WORKLOAD_KINDS:
+            if "containers:" in content.lower():
+                if "livenessProbe" not in content and "readinessProbe" not in content:
+                    findings.append(RiskFinding(
+                        category=RiskCategory.MISSING_HEALTH_CHECK,
+                        severity=RiskSeverity.MEDIUM,
+                        title="Workload sem health probes",
+                        description="Ausência de liveness/readiness impede auto-healing e rollouts seguros.",
+                        file_path=file_path,
+                        evidence=f"kind: {kind} sem livenessProbe/readinessProbe",
+                        suggestion="Adicionar livenessProbe e readinessProbe HTTP ou exec",
+                    ))
+                if "limits:" not in content.lower():
+                    findings.append(RiskFinding(
+                        category=RiskCategory.LACK_OF_OBSERVABILITY,
+                        severity=RiskSeverity.MEDIUM,
+                        title="Container sem resource limits",
+                        description="Sem limits o scheduler não protege o cluster de noisy neighbors.",
+                        file_path=file_path,
+                        evidence=f"kind: {kind} sem resources.limits",
+                        suggestion="Definir requests/limits de CPU e memória por container",
+                    ))
+
+        if re.search(r"^\s*namespace:\s*default\s*$", content, re.MULTILINE | re.IGNORECASE):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.LOW,
+                title="Workload no namespace default",
+                description="Namespace default dificulta isolamento e RBAC por ambiente.",
+                file_path=file_path,
+                evidence="namespace: default",
+                suggestion="Criar namespace dedicado por aplicação ou ambiente",
+            ))
+
+        return findings
+
+    def _is_kubernetes_manifest(self, file_path: str, content: str) -> bool:
+        if self.matches_path(file_path):
+            return bool(self._API_VERSION.search(content) and self._KIND.search(content))
+        if not file_path.lower().endswith((".yml", ".yaml")):
+            return False
+        return bool(self._API_VERSION.search(content) and self._KIND.search(content))
+
+    @staticmethod
+    def _kind_name(content: str) -> str:
+        match = KubernetesAnalyzer._KIND.search(content)
+        return match.group(1).lower() if match else ""
+
+
 class AnalyzerFactory:
     _ANALYZERS: dict[str, list[type[BaseAnalyzer]]] = {
         ".java": [JavaAnalyzer],
@@ -449,6 +625,8 @@ class AnalyzerFactory:
             analyzers.append(OpenApiAnalyzer())
         if ".github/workflows/" in lower or "jenkinsfile" in lower or ".gitlab-ci" in lower:
             analyzers.append(PipelineAnalyzer())
+        if lower.endswith((".yml", ".yaml")):
+            analyzers.append(KubernetesAnalyzer())
 
         for ext, analyzer_classes in AnalyzerFactory._ANALYZERS.items():
             if lower.endswith(ext):

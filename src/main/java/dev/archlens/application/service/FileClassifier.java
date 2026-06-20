@@ -34,7 +34,7 @@ public class FileClassifier {
             }
         }
         if (lower.contains("k8s/") || lower.contains("kubernetes/") || lower.contains("helm/")
-                || lower.contains("deploy/")) {
+                || lower.contains("deploy/") || lower.contains("manifests/") || lower.contains("charts/")) {
             if (fileName.endsWith(".yml") || fileName.endsWith(".yaml")) {
                 return FileType.KUBERNETES;
             }

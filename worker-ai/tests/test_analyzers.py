@@ -2,6 +2,7 @@ from app.analysis.analyzers import (
     AnalyzerFactory,
     DockerAnalyzer,
     JavaAnalyzer,
+    KubernetesAnalyzer,
     MigrationAnalyzer,
     OpenApiAnalyzer,
     PipelineAnalyzer,
@@ -102,7 +103,84 @@ def test_analyzer_factory_dispatch():
     assert any(isinstance(a, PipelineAnalyzer) for a in AnalyzerFactory.get_analyzers(".github/workflows/ci.yml"))
     assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("infra/main.tf"))
     assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("env/prod.tfvars"))
+    assert any(isinstance(a, KubernetesAnalyzer) for a in AnalyzerFactory.get_analyzers("k8s/deployment.yaml"))
     assert AnalyzerFactory.get_analyzers("README.md") == []
+
+
+def test_kubernetes_analyzer_flags_security_and_health_gaps():
+    content = """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: default
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      containers:
+        - name: api
+          image: nginx:latest
+          privileged: true
+          env:
+            - name: DB_PASSWORD
+              value: super-secret
+"""
+    findings = KubernetesAnalyzer().analyze("k8s/deployment.yaml", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert RiskCategory.MISSING_HEALTH_CHECK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_kubernetes_analyzer_ignores_non_manifest_yaml():
+    content = "server:\n  port: 8080\nspring:\n  profiles: prod\n"
+    assert KubernetesAnalyzer().analyze("config/app.yaml", content) == []
+
+
+def test_kubernetes_analyzer_clean_manifest():
+    content = """
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: platform
+spec:
+  template:
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: api
+          image: ghcr.io/org/api:1.2.3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8080
+          env:
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: api-secrets
+                  key: password
+"""
+    findings = KubernetesAnalyzer().analyze("k8s/deployment.yaml", content)
+    critical = [f for f in findings if f.severity == RiskSeverity.CRITICAL]
+
+    assert critical == []
 
 
 def test_terraform_analyzer_flags_security_and_contract_issues():
