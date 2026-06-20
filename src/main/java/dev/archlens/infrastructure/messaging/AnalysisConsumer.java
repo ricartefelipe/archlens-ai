@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import dev.archlens.application.port.out.AdrRepositoryPort;
@@ -35,6 +36,9 @@ public class AnalysisConsumer {
     private final AnalysisGateway analysisGateway;
     private final LlmGateway llmGateway;
     private final AdrRepositoryPort adrRepository;
+
+    @ConfigProperty(name = "archlens.analysis.llm-fallback-enabled", defaultValue = "true")
+    boolean llmFallbackEnabled;
 
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
@@ -92,7 +96,7 @@ public class AnalysisConsumer {
                 risks.add(risk);
             }
 
-            if (risks.isEmpty()) {
+            if (risks.isEmpty() && llmFallbackEnabled) {
                 LlmAnalysisResult fallback = llmGateway.analyzeProject("Project " + event.projectId());
                 for (var finding : fallback.findings()) {
                     ArchitecturalRisk risk = new ArchitecturalRisk();
@@ -109,6 +113,10 @@ public class AnalysisConsumer {
                     risks.add(risk);
                 }
                 analysis.setSummary(fallback.summary());
+            } else if (risks.isEmpty()) {
+                analysis.setSummary(staticResult.summary() != null
+                        ? staticResult.summary()
+                        : "Nenhum risco identificado pela análise estática.");
             } else {
                 analysis.setSummary(staticResult.summary());
             }

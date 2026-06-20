@@ -131,6 +131,12 @@ archlens:
       model: ${ARCHLENS_LLM_OLLAMA_MODEL:llama3.2}
   embedding:
     dimension: ${ARCHLENS_EMBEDDING_DIMENSION:1536}
+  storage:
+    base-path: ${ARCHLENS_STORAGE_BASE_PATH:/tmp/archlens/projects}
+  ingest:
+    async: ${ARCHLENS_INGEST_ASYNC:true}
+  analysis:
+    llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:true}
 
 mp:
   messaging:
@@ -160,6 +166,9 @@ mp:
         content-type-override: application/json
 
 "%prod":
+  archlens:
+    analysis:
+      llm-fallback-enabled: false
   quarkus:
     datasource:
       username: ${QUARKUS_DATASOURCE_USERNAME:archlens}

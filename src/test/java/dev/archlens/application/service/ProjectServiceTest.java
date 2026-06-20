@@ -71,6 +71,14 @@ class ProjectServiceTest {
     }
 
     @Test
+    @DisplayName("getById não expõe projeto de outro tenant")
+    void getByIdRejectsOtherTenant() {
+        Project created = service.create("api", null);
+        tenantProvider.tenantId = "tenant-2";
+        assertThrows(ProjectNotFoundException.class, () -> service.getById(created.getId()));
+    }
+
+    @Test
     @DisplayName("getById lança ProjectNotFoundException quando ausente")
     void getByIdThrowsWhenMissing() {
         UUID unknown = UUID.randomUUID();
@@ -106,6 +114,13 @@ class ProjectServiceTest {
         }
 
         @Override
+        public Optional<Project> findByIdAndTenantId(UUID id, String tenantId) {
+            return store.stream()
+                    .filter(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()))
+                    .findFirst();
+        }
+
+        @Override
         public List<Project> findAllByTenantId(String tenantId) {
             return store.stream().filter(p -> tenantId.equals(p.getTenantId())).toList();
         }
@@ -113,6 +128,11 @@ class ProjectServiceTest {
         @Override
         public boolean existsById(UUID id) {
             return store.stream().anyMatch(p -> p.getId().equals(id));
+        }
+
+        @Override
+        public boolean existsByIdAndTenantId(UUID id, String tenantId) {
+            return store.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
         }
     }
 }

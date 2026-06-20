@@ -53,6 +53,12 @@ public class ProjectRepositoryAdapter implements ProjectRepositoryPort {
     }
 
     @Override
+    public Optional<Project> findByIdAndTenantId(UUID id, String tenantId) {
+        return repository.findByIdAndTenantId(id, tenantId)
+                .map(mapper::toDomain);
+    }
+
+    @Override
     public List<Project> findAllByTenantId(String tenantId) {
         return repository.findByTenantId(tenantId).stream()
                 .map(mapper::toDomain)
@@ -62,5 +68,10 @@ public class ProjectRepositoryAdapter implements ProjectRepositoryPort {
     @Override
     public boolean existsById(UUID id) {
         return repository.findByIdOptional(id).isPresent();
+    }
+
+    @Override
+    public boolean existsByIdAndTenantId(UUID id, String tenantId) {
+        return repository.findByIdAndTenantId(id, tenantId).isPresent();
     }
 }

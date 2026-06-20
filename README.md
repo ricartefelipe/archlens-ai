@@ -136,3 +136,12 @@ No **push** ou **pull request** para `main` e `develop`, [`.github/workflows/ci.
 ## Licença
 
 Projeto de portfólio. Todos os direitos reservados.
+
+## Documentação comercial e operacional
+
+- [Avaliação ponta a ponta](docs/AVALIACAO-PONTA-A-PONTA.md)
+- [README comercial](docs/README-COMERCIAL.md)
+- [Runbook do consultor](docs/RUNBOOK-CONSULTOR.md)
+- [Template de relatório](docs/TEMPLATE-RELATORIO-DIAGNOSTICO.md)
+- [Roadmap](docs/ROADMAP-PRODUTO.md)
+- [Checklist de entrega](docs/ENTREGA-COMPLETA.md)

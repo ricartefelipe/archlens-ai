@@ -1,6 +1,7 @@
 package dev.archlens.infrastructure.persistence.panache;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import dev.archlens.infrastructure.persistence.entity.ProjectEntity;
@@ -12,5 +13,9 @@ public class ProjectPanacheRepository implements PanacheRepositoryBase<ProjectEn
 
     public List<ProjectEntity> findByTenantId(String tenantId) {
         return find("tenantId", tenantId).list();
+    }
+
+    public Optional<ProjectEntity> findByIdAndTenantId(UUID id, String tenantId) {
+        return find("id = ?1 and tenantId = ?2", id, tenantId).firstResultOptional();
     }
 }
