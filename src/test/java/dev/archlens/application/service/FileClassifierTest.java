@@ -44,6 +44,8 @@ class FileClassifierTest {
                 () -> assertEquals(FileType.OPENAPI, classifier.classify("api/swagger.json")),
                 () -> assertEquals(FileType.KUBERNETES, classifier.classify("k8s/deployment.yaml")),
                 () -> assertEquals(FileType.KUBERNETES, classifier.classify("helm/values.yml")),
+                () -> assertEquals(FileType.KUBERNETES, classifier.classify("manifests/api/deployment.yaml")),
+                () -> assertEquals(FileType.KUBERNETES, classifier.classify("charts/app/values.yaml")),
                 () -> assertEquals(FileType.YAML, classifier.classify("config/app.yaml")));
     }
 

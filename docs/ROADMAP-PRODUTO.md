@@ -33,7 +33,8 @@
 
 - [ ] Portal de organizações (convites, RBAC)
 - [x] Analyzer Terraform (`.tf`, `.tfvars`)
-- [ ] Analyzers: K8s, .NET
+- [x] Analyzer Kubernetes (manifests YAML)
+- [ ] Analyzers: .NET
 - [x] Comparativo before/after entre análises
 - [ ] API pública para integrações
 - [ ] White-label
