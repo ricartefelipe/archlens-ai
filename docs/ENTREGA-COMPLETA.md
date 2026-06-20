@@ -48,8 +48,9 @@
 |---|------|--------|
 | 21 | Comparativo before/after entre análises | ✅ |
 | 22 | Analyzer Terraform (`.tf`, `.tfvars`) | ✅ |
-| 23 | Analyzers K8s/.NET | Pendente |
-| 24 | Portal organizações (RBAC) | Pendente |
+| 23 | Analyzer Kubernetes (manifests YAML) | ✅ |
+| 24 | Analyzer .NET | Pendente |
+| 25 | Portal organizações (RBAC) | Pendente |
 
 ---
 
