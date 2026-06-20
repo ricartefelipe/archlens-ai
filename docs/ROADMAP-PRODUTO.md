@@ -18,10 +18,14 @@
 - [x] Dockerfile backend + frontend no compose
 - [x] Roteiro de demo gravada (`docs/DEMO-SCRIPT.md`)
 
-## Fase 3 — Monetização (60 dias)
+## Fase 3 — Monetização (consultoria) ✅ parcial
 
-- [ ] Stripe: pay-per-diagnóstico
-- [ ] Quotas por tenant (uploads, análises, tokens)
+- [x] Quotas por tenant (projetos, análises/mês, upload MB)
+- [x] Planos comerciais (PILOT → PORTFOLIO + INTERNO)
+- [x] API `/v1/account/usage` + admin upgrade de plano
+- [x] Painel de uso no frontend + link landing
+- [x] ADR modelo comercial (`docs/ADR-001-modelo-comercial.md`)
+- [ ] Stripe: pay-per-diagnóstico (Fase 3b)
 - [ ] Metering e dashboard de custo IA
 - [ ] Landing page integrada (archlens-landing)
 

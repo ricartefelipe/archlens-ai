@@ -21,6 +21,7 @@ import dev.archlens.domain.model.AnalysisStatus;
 import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.RiskCategory;
 import dev.archlens.domain.model.RiskSeverity;
+import dev.archlens.application.service.QuotaService;
 import dev.archlens.infrastructure.persistence.rls.TenantRlsService;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.json.JsonObject;
@@ -42,18 +43,21 @@ public class AnalysisConsumer {
     boolean llmFallbackEnabled;
 
     private final TenantRlsService tenantRlsService;
+    private final QuotaService quotaService;
 
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
                             AnalysisGateway analysisGateway,
                             LlmGateway llmGateway,
                             AdrRepositoryPort adrRepository,
-                            TenantRlsService tenantRlsService) {
+                            TenantRlsService tenantRlsService,
+                            QuotaService quotaService) {
         this.analysisRepository = analysisRepository;
         this.analysisGateway = analysisGateway;
         this.llmGateway = llmGateway;
         this.adrRepository = adrRepository;
         this.tenantRlsService = tenantRlsService;
+        this.quotaService = quotaService;
     }
 
     @Incoming("analysis-requests-in")
@@ -134,6 +138,8 @@ public class AnalysisConsumer {
             analysisRepository.save(analysis);
 
             LOG.infof("Analysis %s COMPLETED with %d risks (async)", analysis.getId(), risks.size());
+
+            quotaService.recordAnalysis(event.tenantId());
 
             generateAdrs(analysis, staticResult.findings(), event.tenantId());
 

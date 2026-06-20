@@ -11,10 +11,12 @@ import java.util.Optional;
 import java.util.UUID;
 
 import dev.archlens.application.port.out.ProjectRepositoryPort;
+import dev.archlens.application.port.out.TenantAccountRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.ProjectStatus;
+import dev.archlens.domain.model.TenantAccount;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -23,13 +25,15 @@ class ProjectServiceTest {
 
     private InMemoryProjectRepository repository;
     private FixedTenantProvider tenantProvider;
+    private QuotaService quotaService;
     private ProjectService service;
 
     @BeforeEach
     void setUp() {
         repository = new InMemoryProjectRepository();
         tenantProvider = new FixedTenantProvider("tenant-1");
-        service = new ProjectService(repository, tenantProvider);
+        quotaService = new QuotaService(new InMemoryTenantAccountRepository(), repository, false);
+        service = new ProjectService(repository, tenantProvider, quotaService);
     }
 
     @Test
@@ -133,6 +137,22 @@ class ProjectServiceTest {
         @Override
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return store.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
+        }
+    }
+
+    private static final class InMemoryTenantAccountRepository implements TenantAccountRepositoryPort {
+        private final List<TenantAccount> store = new ArrayList<>();
+
+        @Override
+        public TenantAccount save(TenantAccount account) {
+            store.removeIf(a -> a.getTenantId().equals(account.getTenantId()));
+            store.add(account);
+            return account;
+        }
+
+        @Override
+        public Optional<TenantAccount> findByTenantId(String tenantId) {
+            return store.stream().filter(a -> tenantId.equals(a.getTenantId())).findFirst();
         }
     }
 }

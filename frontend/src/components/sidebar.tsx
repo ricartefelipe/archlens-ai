@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Layers, LayoutDashboard, FolderOpen } from 'lucide-react';
+import { Layers, FolderOpen } from 'lucide-react';
 import clsx from 'clsx';
-import { getTenantId } from '@/lib/auth';
+import { UsagePanel } from '@/components/usage-panel';
 
 const navItems = [
   { href: '/projects', label: 'Projects', icon: FolderOpen },
@@ -12,7 +12,6 @@ const navItems = [
 
 export function Sidebar() {
   const pathname = usePathname();
-  const tenantId = getTenantId();
 
   return (
     <aside className="w-64 flex flex-col bg-background border-r border-border h-full">
@@ -44,12 +43,7 @@ export function Sidebar() {
         })}
       </nav>
 
-      <div className="p-4 border-t border-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <LayoutDashboard className="w-3.5 h-3.5" />
-          <span>Tenant: {tenantId}</span>
-        </div>
-      </div>
+      <UsagePanel />
     </aside>
   );
 }
