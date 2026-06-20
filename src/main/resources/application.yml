@@ -113,6 +113,9 @@ quarkus:
       password: archlens
       jdbc:
         url: jdbc:postgresql://localhost:5432/archlens
+  archlens:
+    commercial:
+      enforce-quotas: false
 
 rabbitmq-host: ${RABBITMQ_HOST:localhost}
 rabbitmq-port: ${RABBITMQ_PORT:5672}
@@ -141,6 +144,8 @@ archlens:
     enabled: ${ARCHLENS_RLS_ENABLED:false}
   report:
     brand-name: ${ARCHLENS_REPORT_BRAND_NAME:ArchLens}
+  commercial:
+    enforce-quotas: ${ARCHLENS_ENFORCE_QUOTAS:true}
 
 mp:
   messaging:

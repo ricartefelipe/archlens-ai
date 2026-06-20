@@ -41,18 +41,21 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
     private final AdrRepositoryPort adrRepository;
     private final AnalysisProducer analysisProducer;
     private final TenantProvider tenantProvider;
+    private final QuotaService quotaService;
 
     @Inject
     public AnalysisService(AnalysisRepositoryPort analysisRepository,
                            ProjectRepositoryPort projectRepository,
                            AdrRepositoryPort adrRepository,
                            AnalysisProducer analysisProducer,
-                           TenantProvider tenantProvider) {
+                           TenantProvider tenantProvider,
+                           QuotaService quotaService) {
         this.analysisRepository = analysisRepository;
         this.projectRepository = projectRepository;
         this.adrRepository = adrRepository;
         this.analysisProducer = analysisProducer;
         this.tenantProvider = tenantProvider;
+        this.quotaService = quotaService;
     }
 
     @Override
@@ -69,6 +72,8 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
         if (project.getStatus() != ProjectStatus.READY && project.getStatus() != ProjectStatus.UPLOADED) {
             throw new ProjectNotReadyException(projectId, project.getStatus());
         }
+
+        quotaService.checkCanRunAnalysis(tenantId);
 
         Analysis analysis = new Analysis();
         analysis.setId(UUID.randomUUID());

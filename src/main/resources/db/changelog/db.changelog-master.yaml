@@ -9,3 +9,5 @@ databaseChangeLog:
       file: db/changelog/migrations/004-create-ingestion-status.yaml
   - include:
       file: db/changelog/migrations/005-enable-tenant-rls.yaml
+  - include:
+      file: db/changelog/migrations/006-create-tenant-accounts.yaml

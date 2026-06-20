@@ -1,4 +1,4 @@
-import type { Project, ProjectFile, Analysis, Adr, Question } from './types';
+import type { Project, ProjectFile, Analysis, Adr, Question, AccountUsage } from './types';
 import { getAccessToken } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -39,6 +39,10 @@ async function apiFetch<T>(path: string, tenantId: string, options: RequestInit 
 
 export async function listProjects(tenantId: string): Promise<Project[]> {
   return apiFetch('/v1/projects', tenantId);
+}
+
+export async function getAccountUsage(tenantId: string): Promise<AccountUsage> {
+  return apiFetch('/v1/account/usage', tenantId);
 }
 
 export async function createProject(tenantId: string, name: string, description: string): Promise<Project> {
