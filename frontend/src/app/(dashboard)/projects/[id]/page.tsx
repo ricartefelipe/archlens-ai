@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { Loader2, Play, MessageSquare, FileCode, BarChart3 } from 'lucide-react';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { Loader2, Play, MessageSquare, FileCode, BarChart3, GitCompare } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import {
@@ -25,16 +25,23 @@ function formatBytes(bytes: number): string {
 export default function ProjectDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
   const [files, setFiles] = useState<ProjectFile[]>([]);
   const [analyses, setAnalyses] = useState<Analysis[]>([]);
-  const [tab, setTab] = useState<Tab>('upload');
-  const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
   const [creatingAnalysis, setCreatingAnalysis] = useState(false);
   const [pollingIds, setPollingIds] = useState<Set<string>>(new Set());
+  const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const initialTab = searchParams.get('tab');
+  const [tab, setTab] = useState<Tab>(
+    initialTab === 'files' || initialTab === 'analyses' || initialTab === 'upload'
+      ? initialTab
+      : 'upload'
+  );
+  const [loading, setLoading] = useState(true);
+  const [uploading, setUploading] = useState(false);
 
   const loadData = useCallback(async () => {
     const tenantId = getTenantId();
@@ -47,13 +54,13 @@ export default function ProjectDetailPage() {
       setProject(proj);
       setFiles(fileList);
       setAnalyses(analysisList);
-      if (fileList.length > 0) setTab('files');
+      if (fileList.length > 0 && !initialTab) setTab('files');
     } catch (err) {
       console.error('Failed to load project data:', err);
     } finally {
       setLoading(false);
     }
-  }, [projectId]);
+  }, [projectId, initialTab]);
 
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -120,6 +127,34 @@ export default function ProjectDetailPage() {
       setCreatingAnalysis(false);
     }
   }
+
+  function toggleCompareSelection(analysisId: string) {
+    setSelectedForCompare((prev) => {
+      if (prev.includes(analysisId)) {
+        return prev.filter((id) => id !== analysisId);
+      }
+      if (prev.length >= 2) {
+        return [prev[1], analysisId];
+      }
+      return [...prev, analysisId];
+    });
+  }
+
+  function handleCompare() {
+    if (selectedForCompare.length !== 2) {
+      return;
+    }
+    const sorted = [...selectedForCompare].sort((a, b) => {
+      const aDate = analyses.find((item) => item.id === a)?.createdAt ?? '';
+      const bDate = analyses.find((item) => item.id === b)?.createdAt ?? '';
+      return new Date(aDate).getTime() - new Date(bDate).getTime();
+    });
+    router.push(
+      `/projects/${projectId}/analyses/compare?baseline=${sorted[0]}&current=${sorted[1]}`
+    );
+  }
+
+  const completedAnalyses = analyses.filter((a) => a.status === 'COMPLETED');
 
   if (loading) {
     return (
@@ -231,15 +266,46 @@ export default function ProjectDetailPage() {
 
       {tab === 'analyses' && (
         <div className="space-y-3">
+          {completedAnalyses.length >= 2 && (
+            <div className="flex items-center justify-between bg-card border border-border rounded-xl p-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">Comparar evolução</p>
+                <p className="text-xs text-muted-foreground">
+                  Selecione 2 análises concluídas ({selectedForCompare.length}/2)
+                </p>
+              </div>
+              <button
+                onClick={handleCompare}
+                disabled={selectedForCompare.length !== 2}
+                className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 disabled:opacity-50 transition-colors"
+              >
+                <GitCompare className="w-4 h-4" />
+                Comparar before/after
+              </button>
+            </div>
+          )}
           {analyses.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">No analyses yet. Click &quot;Run Analysis&quot; to start.</p>
           ) : (
             analyses.map((a) => (
-              <button
+              <div
                 key={a.id}
-                onClick={() => router.push(`/projects/${projectId}/analyses/${a.id}`)}
-                className="w-full bg-card border border-border rounded-xl p-4 text-left hover:border-primary/50 transition-all"
+                className="w-full bg-card border border-border rounded-xl p-4 hover:border-primary/50 transition-all"
               >
+                <div className="flex items-start gap-3">
+                  {a.status === 'COMPLETED' && completedAnalyses.length >= 2 && (
+                    <input
+                      type="checkbox"
+                      checked={selectedForCompare.includes(a.id)}
+                      onChange={() => toggleCompareSelection(a.id)}
+                      className="mt-1 h-4 w-4 rounded border-border"
+                      aria-label={`Selecionar análise ${a.id} para comparar`}
+                    />
+                  )}
+                  <button
+                    onClick={() => router.push(`/projects/${projectId}/analyses/${a.id}`)}
+                    className="flex-1 text-left"
+                  >
                 <div className="flex items-center justify-between mb-2">
                   <StatusBadge status={a.status} />
                   <span className="text-xs text-muted-foreground">
@@ -258,7 +324,9 @@ export default function ProjectDetailPage() {
                     Processing...
                   </div>
                 )}
-              </button>
+                  </button>
+                </div>
+              </div>
             ))
           )}
         </div>
