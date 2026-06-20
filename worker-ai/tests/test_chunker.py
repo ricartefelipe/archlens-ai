@@ -4,6 +4,7 @@ from app.chunking.strategies import (
     GenericChunker,
     JavaChunker,
     SqlChunker,
+    TerraformChunker,
     YamlChunker,
 )
 
@@ -35,6 +36,8 @@ def test_chunker_factory_selects_strategy_by_extension():
     assert isinstance(ChunkerFactory.get_chunker("Service.java"), JavaChunker)
     assert isinstance(ChunkerFactory.get_chunker("config.yml"), YamlChunker)
     assert isinstance(ChunkerFactory.get_chunker("001.sql"), SqlChunker)
+    assert isinstance(ChunkerFactory.get_chunker("main.tf"), TerraformChunker)
+    assert isinstance(ChunkerFactory.get_chunker("prod.tfvars"), TerraformChunker)
     assert isinstance(ChunkerFactory.get_chunker("README.md"), GenericChunker)
 
 

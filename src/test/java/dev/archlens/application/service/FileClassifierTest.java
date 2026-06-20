@@ -55,6 +55,8 @@ class FileClassifierTest {
                 () -> assertEquals(FileType.KOTLIN, classifier.classify("Main.kt")),
                 () -> assertEquals(FileType.PYTHON, classifier.classify("app/main.py")),
                 () -> assertEquals(FileType.SQL, classifier.classify("db/001.sql")),
+                () -> assertEquals(FileType.TERRAFORM, classifier.classify("infra/main.tf")),
+                () -> assertEquals(FileType.TERRAFORM, classifier.classify("env/prod.tfvars")),
                 () -> assertEquals(FileType.MARKDOWN, classifier.classify("README.md")),
                 () -> assertEquals(FileType.SHELL, classifier.classify("scripts/run.sh")),
                 () -> assertEquals(FileType.OTHER, classifier.classify("data.bin")));
@@ -69,6 +71,7 @@ class FileClassifierTest {
                 () -> assertFalse(classifier.isRelevant("assets/logo.png")),
                 () -> assertFalse(classifier.isRelevant("data.bin")),
                 () -> assertTrue(classifier.isRelevant("src/main/java/App.java")),
+                () -> assertTrue(classifier.isRelevant("infra/main.tf")),
                 () -> assertTrue(classifier.isRelevant("pom.xml")));
     }
 }

@@ -17,6 +17,7 @@ public enum FileType {
     GRADLE("Gradle Build"),
     MAVEN("Maven POM"),
     PIPELINE("CI/CD Pipeline"),
+    TERRAFORM("Terraform"),
     PYTHON("Python Source"),
     SHELL("Shell Script"),
     OTHER("Other");
