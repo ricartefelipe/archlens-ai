@@ -5,6 +5,7 @@ from app.analysis.analyzers import (
     MigrationAnalyzer,
     OpenApiAnalyzer,
     PipelineAnalyzer,
+    TerraformAnalyzer,
 )
 from app.analysis.rules import RiskCategory, RiskSeverity
 
@@ -99,4 +100,75 @@ def test_analyzer_factory_dispatch():
     assert any(isinstance(a, DockerAnalyzer) for a in AnalyzerFactory.get_analyzers("Dockerfile"))
     assert any(isinstance(a, OpenApiAnalyzer) for a in AnalyzerFactory.get_analyzers("api/openapi.yaml"))
     assert any(isinstance(a, PipelineAnalyzer) for a in AnalyzerFactory.get_analyzers(".github/workflows/ci.yml"))
+    assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("infra/main.tf"))
+    assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("env/prod.tfvars"))
     assert AnalyzerFactory.get_analyzers("README.md") == []
+
+
+def test_terraform_analyzer_flags_security_and_contract_issues():
+    content = """
+terraform {
+  backend "local" {
+    path = "terraform.tfstate"
+  }
+}
+
+provider "aws" {
+  region = "us-east-1"
+}
+
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+}
+
+resource "aws_security_group" "web" {
+  ingress {
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+db_password = "super-secret-123"
+"""
+    findings = TerraformAnalyzer().analyze("main.tf", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert RiskCategory.CONTRACT_VIOLATION in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_terraform_analyzer_clean_config():
+    content = """
+terraform {
+  backend "s3" {
+    bucket = "tf-state"
+    key    = "prod"
+    region = "us-east-1"
+  }
+}
+
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "5.1.0"
+}
+
+resource "aws_instance" "app" {
+  tags = {
+    Environment = "prod"
+    Owner       = "platform"
+  }
+}
+"""
+    findings = TerraformAnalyzer().analyze("main.tf", content)
+    security_findings = [f for f in findings if f.category == RiskCategory.SECURITY_RISK]
+
+    assert security_findings == []

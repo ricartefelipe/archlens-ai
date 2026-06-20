@@ -285,11 +285,155 @@ class PipelineAnalyzer(BaseAnalyzer):
         return findings
 
 
+class TerraformAnalyzer(BaseAnalyzer):
+    _LOCAL_BACKEND = re.compile(r'backend\s+"local"', re.MULTILINE)
+    _TERRAFORM_BLOCK = re.compile(r"^\s*terraform\s*\{", re.MULTILINE)
+    _PROVIDER_BLOCK = re.compile(r'^\s*provider\s+"[\w-]+"\s*\{', re.MULTILINE)
+    _REQUIRED_PROVIDERS = re.compile(r"^\s*required_providers\s*\{", re.MULTILINE)
+    _MODULE_BLOCK = re.compile(r'module\s+"[^"]+"\s*\{', re.MULTILINE)
+    _RESOURCE_OR_MODULE = re.compile(
+        r"^\s*(?:resource|module)\s+\"[^\"]+\"\s+\"[^\"]+\"\s*\{", re.MULTILINE
+    )
+    _HARDCODED_SECRET = re.compile(
+        r"(?i)(password|secret|api_key|access_key|token|private_key|client_secret)\s*=\s*\"(?!\$\{)(?!\$\()([^\"]{3,})\"",
+        re.MULTILINE,
+    )
+    _OPEN_CIDR = re.compile(
+        r"(?i)(?:cidr_blocks|cidr_block|source_address_prefix(?:es)?)\s*=\s*\[[^\]]*0\.0\.0\.0/0[^\]]*\]",
+        re.MULTILINE,
+    )
+    _AWS_RESOURCE = re.compile(
+        r'^\s*resource\s+"aws_[^"]+"\s+"[^"]+"\s*\{', re.MULTILINE
+    )
+    _TAGS_BLOCK = re.compile(r"^\s*tags\s*=\s*\{", re.MULTILINE)
+
+    _MONOLITH_LINE_THRESHOLD = 250
+    _MONOLITH_BLOCK_THRESHOLD = 12
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+        lower_path = file_path.lower()
+        is_tfvars = lower_path.endswith(".tfvars")
+
+        if self._LOCAL_BACKEND.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Backend de state local",
+                description="State Terraform em disco local impede colaboração segura e locking remoto.",
+                file_path=file_path,
+                evidence='backend "local" detectado',
+                suggestion="Migrar para backend remoto (S3+DynamoDB, GCS, Azure Blob, Terraform Cloud)",
+            ))
+
+        for match in self._HARDCODED_SECRET.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Credencial hardcoded em Terraform",
+                description="Segredos em plain text no repositório expõem a infraestrutura.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar variáveis sensíveis, Vault ou secrets do CI/CD (TF_VAR_ / remote backend)",
+            ))
+
+        for match in self._OPEN_CIDR.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Regra de rede aberta (0.0.0.0/0)",
+                description="Exposição pública ampla em security group ou firewall.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Restringir CIDR às redes corporativas ou usar security groups de origem específica",
+            ))
+
+        if not is_tfvars:
+            findings.extend(self._analyze_modules(file_path, content))
+            findings.extend(self._analyze_providers(file_path, content))
+            findings.extend(self._analyze_structure(file_path, content))
+            findings.extend(self._analyze_missing_tags(file_path, content))
+
+        return findings
+
+    def _analyze_modules(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+        for match in self._MODULE_BLOCK.finditer(content):
+            snippet = content[match.start(): match.start() + 900]
+            if "source" not in snippet:
+                continue
+            if "version" in snippet:
+                continue
+            if re.search(r'source\s*=\s*"[^"]*\.git"', snippet):
+                continue
+            if re.search(r'source\s*=\s*"\./', snippet) or re.search(r'source\s*=\s*"\.\./', snippet):
+                continue
+            findings.append(RiskFinding(
+                category=RiskCategory.CONTRACT_VIOLATION,
+                severity=RiskSeverity.MEDIUM,
+                title="Módulo Terraform sem versão fixada",
+                description="Módulos de registry sem constraint de versão podem quebrar deploys reprodutíveis.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:80],
+                suggestion='Adicionar version = "x.y.z" ao bloco module',
+            ))
+        return findings
+
+    def _analyze_providers(self, file_path: str, content: str) -> list[RiskFinding]:
+        if not self._PROVIDER_BLOCK.search(content):
+            return []
+        if self._REQUIRED_PROVIDERS.search(content):
+            return []
+        return [RiskFinding(
+            category=RiskCategory.CONTRACT_VIOLATION,
+            severity=RiskSeverity.MEDIUM,
+            title="Provider sem required_providers",
+            description="Versões de provider não pinadas aumentam risco de drift entre ambientes.",
+            file_path=file_path,
+            evidence="provider { } sem bloco required_providers no mesmo arquivo",
+            suggestion="Centralizar required_providers com version/source em versions.tf",
+        )]
+
+    def _analyze_structure(self, file_path: str, content: str) -> list[RiskFinding]:
+        lines = content.splitlines()
+        block_count = len(self._RESOURCE_OR_MODULE.findall(content))
+        if len(lines) >= self._MONOLITH_LINE_THRESHOLD and block_count >= self._MONOLITH_BLOCK_THRESHOLD:
+            return [RiskFinding(
+                category=RiskCategory.EXCESSIVE_COUPLING,
+                severity=RiskSeverity.MEDIUM,
+                title="Arquivo Terraform monolítico",
+                description=f"Arquivo com {len(lines)} linhas e {block_count} blocos resource/module dificulta manutenção.",
+                file_path=file_path,
+                evidence=f"{len(lines)} linhas, {block_count} blocos",
+                suggestion="Dividir por domínio (networking, compute, data) ou por ambiente",
+            )]
+        return []
+
+    def _analyze_missing_tags(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+        for match in self._AWS_RESOURCE.finditer(content):
+            snippet = content[match.start(): match.start() + 600]
+            if self._TAGS_BLOCK.search(snippet):
+                continue
+            findings.append(RiskFinding(
+                category=RiskCategory.LACK_OF_OBSERVABILITY,
+                severity=RiskSeverity.LOW,
+                title="Recurso AWS sem tags",
+                description="Tags ausentes dificultam cost allocation, ownership e auditoria.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:80],
+                suggestion="Adicionar bloco tags com environment, owner e cost-center",
+            ))
+        return findings
+
+
 class AnalyzerFactory:
     _ANALYZERS: dict[str, list[type[BaseAnalyzer]]] = {
         ".java": [JavaAnalyzer],
         ".kt": [JavaAnalyzer],
         ".sql": [MigrationAnalyzer],
+        ".tf": [TerraformAnalyzer],
+        ".tfvars": [TerraformAnalyzer],
     }
 
     @staticmethod
