@@ -78,19 +78,16 @@ services:
       EMBEDDING_DIMENSION_VERIFY: ${EMBEDDING_DIMENSION_VERIFY:-true}
       STORAGE_BASE_PATH: /data/projects
       LOG_LEVEL: INFO
-      BACKEND_URL: http://host.docker.internal:8080
     ports:
       - "8081:8000"
     volumes:
-      - workerdata:/data/projects
+      - projectdata:/data/projects
     depends_on:
       postgres:
         condition: service_healthy
-    profiles:
-      - worker
 
 volumes:
   pgdata:
   redisdata:
   rabbitmqdata:
-  workerdata:
+  projectdata:

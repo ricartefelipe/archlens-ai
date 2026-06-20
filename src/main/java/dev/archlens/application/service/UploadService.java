@@ -38,24 +38,27 @@ public class UploadService implements UploadProjectUseCase {
     private final FileStoragePort fileStorage;
     private final FileClassifier fileClassifier;
     private final TenantProvider tenantProvider;
+    private final IngestOrchestrationService ingestOrchestrationService;
 
     public UploadService(ProjectRepositoryPort projectRepository,
                          ProjectFileRepositoryPort fileRepository,
                          FileStoragePort fileStorage,
                          FileClassifier fileClassifier,
-                         TenantProvider tenantProvider) {
+                         TenantProvider tenantProvider,
+                         IngestOrchestrationService ingestOrchestrationService) {
         this.projectRepository = projectRepository;
         this.fileRepository = fileRepository;
         this.fileStorage = fileStorage;
         this.fileClassifier = fileClassifier;
         this.tenantProvider = tenantProvider;
+        this.ingestOrchestrationService = ingestOrchestrationService;
     }
 
     @Override
     @Transactional
     public Project upload(UUID projectId, String fileName, InputStream zipStream) {
         String tenantId = tenantProvider.getCurrentTenantId();
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findByIdAndTenantId(projectId, tenantId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
 
         LOG.infof("Starting upload for project %s: %s", projectId, fileName);
@@ -78,7 +81,12 @@ public class UploadService implements UploadProjectUseCase {
             project.setFileCount(extractedFiles.size());
             projectRepository.save(project);
 
-            LOG.infof("Upload completed for project %s: %d files extracted", projectId, extractedFiles.size());
+            List<String> filePaths = extractedFiles.stream()
+                    .map(ProjectFile::getFilePath)
+                    .toList();
+            ingestOrchestrationService.startIngest(projectId, tenantId, filePaths);
+
+            LOG.infof("Upload completed for project %s: %d files extracted, ingest started", projectId, extractedFiles.size());
             return project;
         } catch (Exception e) {
             LOG.errorf(e, "Upload failed for project %s", projectId);

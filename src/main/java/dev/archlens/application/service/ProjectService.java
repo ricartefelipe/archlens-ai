@@ -52,7 +52,8 @@ public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase
 
     @Override
     public Project getById(UUID id) {
-        return projectRepository.findById(id)
+        String tenantId = tenantProvider.getCurrentTenantId();
+        return projectRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ProjectNotFoundException(id));
     }
 }

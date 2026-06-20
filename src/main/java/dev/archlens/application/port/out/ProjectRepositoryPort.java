@@ -12,7 +12,11 @@ public interface ProjectRepositoryPort {
 
     Optional<Project> findById(UUID id);
 
+    Optional<Project> findByIdAndTenantId(UUID id, String tenantId);
+
     List<Project> findAllByTenantId(String tenantId);
 
     boolean existsById(UUID id);
+
+    boolean existsByIdAndTenantId(UUID id, String tenantId);
 }

@@ -16,9 +16,12 @@ import dev.archlens.application.port.out.ProjectRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.AnalysisNotFoundException;
 import dev.archlens.domain.exception.ProjectNotFoundException;
+import dev.archlens.domain.exception.ProjectNotReadyException;
 import dev.archlens.domain.model.Adr;
 import dev.archlens.domain.model.Analysis;
 import dev.archlens.domain.model.AnalysisStatus;
+import dev.archlens.domain.model.Project;
+import dev.archlens.domain.model.ProjectStatus;
 import dev.archlens.infrastructure.messaging.AnalysisEvent;
 import dev.archlens.infrastructure.messaging.AnalysisProducer;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -55,8 +58,14 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
     public Analysis create(UUID projectId) {
         String tenantId = tenantProvider.getCurrentTenantId();
 
-        if (!projectRepository.existsById(projectId)) {
+        if (!projectRepository.existsByIdAndTenantId(projectId, tenantId)) {
             throw new ProjectNotFoundException(projectId);
+        }
+
+        Project project = projectRepository.findByIdAndTenantId(projectId, tenantId)
+                .orElseThrow(() -> new ProjectNotFoundException(projectId));
+        if (project.getStatus() != ProjectStatus.READY && project.getStatus() != ProjectStatus.UPLOADED) {
+            throw new ProjectNotReadyException(projectId, project.getStatus());
         }
 
         Analysis analysis = new Analysis();
@@ -78,14 +87,19 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
 
     @Override
     public Analysis getById(UUID projectId, UUID analysisId) {
+        String tenantId = tenantProvider.getCurrentTenantId();
+        if (!projectRepository.existsByIdAndTenantId(projectId, tenantId)) {
+            throw new ProjectNotFoundException(projectId);
+        }
         return analysisRepository.findByProjectIdAndId(projectId, analysisId)
+                .filter(a -> tenantId.equals(a.getTenantId()))
                 .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
     }
 
     @Override
     public List<Analysis> listByProject(UUID projectId) {
         String tenantId = tenantProvider.getCurrentTenantId();
-        if (!projectRepository.existsById(projectId)) {
+        if (!projectRepository.existsByIdAndTenantId(projectId, tenantId)) {
             throw new ProjectNotFoundException(projectId);
         }
         return analysisRepository.findByProjectIdAndTenantId(projectId, tenantId);
@@ -93,6 +107,10 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
 
     @Override
     public List<Adr> getByAnalysisId(UUID analysisId) {
-        return adrRepository.findByAnalysisId(analysisId);
+        String tenantId = tenantProvider.getCurrentTenantId();
+        Analysis analysis = analysisRepository.findById(analysisId)
+                .filter(a -> tenantId.equals(a.getTenantId()))
+                .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+        return adrRepository.findByAnalysisId(analysis.getId());
     }
 }
