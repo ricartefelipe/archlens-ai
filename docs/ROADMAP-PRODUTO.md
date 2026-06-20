@@ -33,7 +33,7 @@
 
 - [ ] Portal de organizações (convites, RBAC)
 - [ ] Analyzers: Terraform, K8s, .NET
-- [ ] Comparativo before/after entre análises
+- [x] Comparativo before/after entre análises
 - [ ] API pública para integrações
 - [ ] White-label
 

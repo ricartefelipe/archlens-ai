@@ -42,6 +42,14 @@
 | 19 | Landing integrada |
 | 20 | Dashboard custo IA |
 
+## Fase 4 — Escala (em andamento)
+
+| # | Item | Status |
+|---|------|--------|
+| 21 | Comparativo before/after entre análises | ✅ |
+| 22 | Analyzers Terraform/K8s/.NET | Pendente |
+| 23 | Portal organizações (RBAC) | Pendente |
+
 ---
 
 Documentação: [AVALIACAO-PONTA-A-PONTA.md](./AVALIACAO-PONTA-A-PONTA.md) · [ROADMAP-PRODUTO.md](./ROADMAP-PRODUTO.md)

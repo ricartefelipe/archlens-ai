@@ -76,3 +76,26 @@ export interface AccountUsage {
   uploadMbLimit: number;
   usagePeriodStart: string;
 }
+
+export interface AnalysisComparison {
+  projectId: string;
+  baseline: AnalysisSummary;
+  current: AnalysisSummary;
+  baselineSeverityCounts: Record<string, number>;
+  currentSeverityCounts: Record<string, number>;
+  added: ArchitecturalRisk[];
+  removed: ArchitecturalRisk[];
+  severityChanged: SeverityChangedRisk[];
+  unchanged: ArchitecturalRisk[];
+}
+
+export interface AnalysisSummary {
+  id: string;
+  createdAt: string;
+  riskCount: number;
+}
+
+export interface SeverityChangedRisk {
+  baselineRisk: ArchitecturalRisk;
+  currentRisk: ArchitecturalRisk;
+}
