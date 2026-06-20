@@ -27,7 +27,7 @@ public class AnalysisDtoMapper {
                 domain.getUpdatedAt());
     }
 
-    private ArchitecturalRiskResponse toRiskResponse(ArchitecturalRisk risk) {
+    public ArchitecturalRiskResponse toRiskResponse(ArchitecturalRisk risk) {
         return new ArchitecturalRiskResponse(
                 risk.getId(),
                 risk.getCategory().name(),
