@@ -47,6 +47,7 @@
 | # | Item | Status |
 |---|------|--------|
 | 21 | Comparativo before/after entre análises | ✅ |
+| 22 | Export comparativo (Markdown/JSON/PDF) | ✅ |
 | 22 | Analyzer Terraform (`.tf`, `.tfvars`) | ✅ |
 | 23 | Analyzer Kubernetes (manifests YAML) | ✅ |
 | 24 | Analyzer .NET | Pendente |
