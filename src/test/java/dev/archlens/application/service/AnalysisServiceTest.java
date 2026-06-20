@@ -13,6 +13,7 @@ import java.util.UUID;
 import dev.archlens.application.port.out.AdrRepositoryPort;
 import dev.archlens.application.port.out.AnalysisRepositoryPort;
 import dev.archlens.application.port.out.ProjectRepositoryPort;
+import dev.archlens.application.port.out.TenantAccountRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.exception.ProjectNotReadyException;
@@ -21,6 +22,7 @@ import dev.archlens.domain.model.Analysis;
 import dev.archlens.domain.model.AnalysisStatus;
 import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.ProjectStatus;
+import dev.archlens.domain.model.TenantAccount;
 import dev.archlens.infrastructure.messaging.AnalysisEvent;
 import dev.archlens.infrastructure.messaging.AnalysisProducer;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,12 +41,17 @@ class AnalysisServiceTest {
         analysisRepository = new InMemoryAnalysisRepository();
         projectRepository = new InMemoryProjectRepository();
         producer = new RecordingProducer();
+        QuotaService quotaService = new QuotaService(
+                new InMemoryTenantAccountRepository(),
+                projectRepository,
+                false);
         service = new AnalysisService(
                 analysisRepository,
                 projectRepository,
                 new NoopAdrRepository(),
                 producer,
-                () -> "tenant-1");
+                () -> "tenant-1",
+                quotaService);
     }
 
     @Test
@@ -192,6 +199,22 @@ class AnalysisServiceTest {
         @Override
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return projects.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
+        }
+    }
+
+    private static final class InMemoryTenantAccountRepository implements TenantAccountRepositoryPort {
+        private final List<TenantAccount> store = new ArrayList<>();
+
+        @Override
+        public TenantAccount save(TenantAccount account) {
+            store.removeIf(a -> a.getTenantId().equals(account.getTenantId()));
+            store.add(account);
+            return account;
+        }
+
+        @Override
+        public Optional<TenantAccount> findByTenantId(String tenantId) {
+            return store.stream().filter(a -> tenantId.equals(a.getTenantId())).findFirst();
         }
     }
 }

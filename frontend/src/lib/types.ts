@@ -62,3 +62,17 @@ export interface Question {
   sources: string | null;
   createdAt: string;
 }
+
+export interface AccountUsage {
+  tenantId: string;
+  plan: string;
+  planDisplayName: string;
+  status: string;
+  projectsUsed: number;
+  projectsLimit: number;
+  analysesUsed: number;
+  analysesLimit: number;
+  uploadMbUsed: number;
+  uploadMbLimit: number;
+  usagePeriodStart: string;
+}

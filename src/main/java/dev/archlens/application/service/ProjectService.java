@@ -23,16 +23,21 @@ public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase
 
     private final ProjectRepositoryPort projectRepository;
     private final TenantProvider tenantProvider;
+    private final QuotaService quotaService;
 
-    public ProjectService(ProjectRepositoryPort projectRepository, TenantProvider tenantProvider) {
+    public ProjectService(ProjectRepositoryPort projectRepository,
+                          TenantProvider tenantProvider,
+                          QuotaService quotaService) {
         this.projectRepository = projectRepository;
         this.tenantProvider = tenantProvider;
+        this.quotaService = quotaService;
     }
 
     @Override
     @Transactional
     public Project create(String name, String description) {
         String tenantId = tenantProvider.getCurrentTenantId();
+        quotaService.checkCanCreateProject(tenantId);
 
         Project project = new Project();
         project.setId(UUID.randomUUID());

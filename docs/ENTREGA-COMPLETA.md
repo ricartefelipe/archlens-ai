@@ -24,13 +24,23 @@
 | 11 | Docker backend + frontend no compose | ✅ |
 | 12 | Roteiro demo (`docs/DEMO-SCRIPT.md`) | ✅ |
 
-## Fase 3 — Pendente
+## Fase 3 — Quotas e planos comerciais ✅
+
+| # | Item | Status |
+|---|------|--------|
+| 13 | Quotas por tenant (projetos, análises, upload) | ✅ |
+| 14 | Planos PILOT/DIAGNOSTICO/PORTFOLIO/INTERNO | ✅ |
+| 15 | API usage + admin upgrade | ✅ |
+| 16 | Painel de uso no frontend | ✅ |
+| 17 | ADR modelo comercial | ✅ |
+
+## Fase 3b — Pendente
 
 | # | Item |
 |---|------|
-| 13 | Billing Stripe |
-| 14 | Quotas por tenant |
-| 15 | Landing integrada |
+| 18 | Billing Stripe |
+| 19 | Landing integrada |
+| 20 | Dashboard custo IA |
 
 ---
 

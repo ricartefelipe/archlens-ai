@@ -41,19 +41,22 @@ public class UploadService implements UploadProjectUseCase {
     private final FileClassifier fileClassifier;
     private final TenantProvider tenantProvider;
     private final IngestOrchestrationService ingestOrchestrationService;
+    private final QuotaService quotaService;
 
     public UploadService(ProjectRepositoryPort projectRepository,
                          ProjectFileRepositoryPort fileRepository,
                          FileStoragePort fileStorage,
                          FileClassifier fileClassifier,
                          TenantProvider tenantProvider,
-                         IngestOrchestrationService ingestOrchestrationService) {
+                         IngestOrchestrationService ingestOrchestrationService,
+                         QuotaService quotaService) {
         this.projectRepository = projectRepository;
         this.fileRepository = fileRepository;
         this.fileStorage = fileStorage;
         this.fileClassifier = fileClassifier;
         this.tenantProvider = tenantProvider;
         this.ingestOrchestrationService = ingestOrchestrationService;
+        this.quotaService = quotaService;
     }
 
     @Override
@@ -64,6 +67,8 @@ public class UploadService implements UploadProjectUseCase {
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
 
         LOG.infof("Starting upload for project %s: %s", projectId, fileName);
+
+        quotaService.checkCanUpload(tenantId, MAX_FILE_SIZE);
 
         project.setStatus(ProjectStatus.UPLOADING);
         projectRepository.save(project);
@@ -76,6 +81,9 @@ public class UploadService implements UploadProjectUseCase {
             Files.createDirectories(projectDir);
 
             List<ProjectFile> extractedFiles = extractZip(zipStream, projectDir, projectId, tenantId);
+
+            long totalBytes = extractedFiles.stream().mapToLong(ProjectFile::getSizeBytes).sum();
+            quotaService.recordUpload(tenantId, totalBytes);
 
             fileRepository.saveAll(extractedFiles);
 
