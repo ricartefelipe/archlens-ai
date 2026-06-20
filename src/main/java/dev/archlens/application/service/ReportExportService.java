@@ -1,5 +1,6 @@
 package dev.archlens.application.service;
 
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -25,8 +26,11 @@ import dev.archlens.domain.model.Analysis;
 import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.RiskSeverity;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
+import dev.archlens.infrastructure.report.PdfReportRenderer;
 import jakarta.enterprise.context.ApplicationScoped;
 
+@TenantScopedRls
 @ApplicationScoped
 public class ReportExportService implements ExportAnalysisReportUseCase {
 
@@ -37,15 +41,18 @@ public class ReportExportService implements ExportAnalysisReportUseCase {
     private final AdrRepositoryPort adrRepository;
     private final TenantProvider tenantProvider;
     private final ObjectMapper objectMapper;
+    private final PdfReportRenderer pdfReportRenderer;
 
     public ReportExportService(AnalysisRepositoryPort analysisRepository,
                                ProjectRepositoryPort projectRepository,
                                AdrRepositoryPort adrRepository,
-                               TenantProvider tenantProvider) {
+                               TenantProvider tenantProvider,
+                               PdfReportRenderer pdfReportRenderer) {
         this.analysisRepository = analysisRepository;
         this.projectRepository = projectRepository;
         this.adrRepository = adrRepository;
         this.tenantProvider = tenantProvider;
+        this.pdfReportRenderer = pdfReportRenderer;
         this.objectMapper = new ObjectMapper()
                 .registerModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
@@ -64,15 +71,27 @@ public class ReportExportService implements ExportAnalysisReportUseCase {
         List<Adr> adrs = adrRepository.findByAnalysisId(analysisId);
 
         return switch (format) {
-            case MARKDOWN -> new Report(
+            case MARKDOWN -> textReport(
                     "text/markdown; charset=utf-8",
                     "archlens-report-" + project.getName() + ".md",
                     buildMarkdown(project, analysis, adrs));
-            case JSON -> new Report(
+            case JSON -> textReport(
                     "application/json; charset=utf-8",
                     "archlens-report-" + project.getName() + ".json",
                     buildJson(project, analysis, adrs));
+            case PDF -> {
+                String markdown = buildMarkdown(project, analysis, adrs);
+                byte[] pdf = pdfReportRenderer.render(markdown, project.getName());
+                yield new Report(
+                        "application/pdf",
+                        "archlens-report-" + project.getName() + ".pdf",
+                        pdf);
+            }
         };
+    }
+
+    private static Report textReport(String contentType, String fileName, String body) {
+        return new Report(contentType, fileName, body.getBytes(StandardCharsets.UTF_8));
     }
 
     private String buildMarkdown(Project project, Analysis analysis, List<Adr> adrs) {

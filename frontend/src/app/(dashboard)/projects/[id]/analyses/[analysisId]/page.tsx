@@ -36,7 +36,7 @@ export default function AnalysisDetailPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [adrs, setAdrs] = useState<Adr[]>([]);
   const [loading, setLoading] = useState(true);
-  const [exporting, setExporting] = useState<'markdown' | 'json' | null>(null);
+  const [exporting, setExporting] = useState<'markdown' | 'json' | 'pdf' | null>(null);
 
   const loadData = useCallback(async () => {
     const tenantId = getTenantId();
@@ -140,6 +140,22 @@ export default function AnalysisDetailPage() {
               >
                 <Download className="w-4 h-4" />
                 {exporting === 'json' ? 'Exportando...' : 'Exportar JSON'}
+              </button>
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={async () => {
+                  setExporting('pdf');
+                  try {
+                    await downloadReport(getTenantId(), projectId, analysisId, 'pdf');
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting === 'pdf' ? 'Exportando...' : 'Exportar PDF'}
               </button>
             </div>
           )}

@@ -9,8 +9,10 @@ import dev.archlens.application.port.out.ProjectRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.model.ProjectFile;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 import jakarta.enterprise.context.ApplicationScoped;
 
+@TenantScopedRls
 @ApplicationScoped
 public class ProjectFileService implements ListProjectFilesUseCase {
 

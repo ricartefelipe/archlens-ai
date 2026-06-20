@@ -78,13 +78,58 @@ services:
       EMBEDDING_DIMENSION_VERIFY: ${EMBEDDING_DIMENSION_VERIFY:-true}
       STORAGE_BASE_PATH: /data/projects
       LOG_LEVEL: INFO
-    ports:
-      - "8081:8000"
     volumes:
       - projectdata:/data/projects
     depends_on:
       postgres:
         condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: archlens-backend
+    environment:
+      QUARKUS_PROFILE: prod
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/archlens
+      QUARKUS_DATASOURCE_USERNAME: archlens
+      QUARKUS_DATASOURCE_PASSWORD: archlens
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: archlens
+      RABBITMQ_PASSWORD: archlens
+      WORKER_AI_BASE_URL: http://worker-ai:8000
+      ARCHLENS_STORAGE_BASE_PATH: /data/projects
+      ARCHLENS_LLM_PROVIDER: local
+      ARCHLENS_ANALYSIS_LLM_FALLBACK: "false"
+      ARCHLENS_RLS_ENABLED: "true"
+      OIDC_AUTH_SERVER_URL: http://keycloak:8080/realms/archlens
+      CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8080:8080"
+    volumes:
+      - projectdata:/data/projects
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      worker-ai:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080
+        NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8180
+        NEXT_PUBLIC_OIDC_ENABLED: "true"
+    container_name: archlens-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:

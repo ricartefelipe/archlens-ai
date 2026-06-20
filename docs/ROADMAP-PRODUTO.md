@@ -1,6 +1,6 @@
 # Roadmap de Produto — ArchLens AI
 
-## Fase 1 — MVP vendável consultoria ✅ (esta entrega)
+## Fase 1 — MVP vendável consultoria ✅
 
 - [x] Upload → ingest automático → status READY
 - [x] Isolamento tenant nos reads
@@ -9,14 +9,14 @@
 - [x] Documentação comercial + runbook + template
 - [x] Worker no compose por padrão
 
-## Fase 2 — Confiança operacional (30 dias)
+## Fase 2 — Confiança operacional ✅
 
-- [ ] PDF com logo do cliente
-- [ ] OIDC PKCE no frontend (remover tenant manual em prod)
-- [ ] RLS PostgreSQL por tenant_id
-- [ ] Testes E2E Playwright
-- [ ] Dockerfile backend + frontend no compose
-- [ ] Demo gravada (3 min)
+- [x] PDF com logo do cliente (`ARCHLENS_REPORT_LOGO_URL`)
+- [x] OIDC PKCE no frontend (`NEXT_PUBLIC_OIDC_ENABLED=true`)
+- [x] RLS PostgreSQL por tenant_id (migration 005 + interceptor)
+- [x] Testes E2E Playwright (`e2e/`)
+- [x] Dockerfile backend + frontend no compose
+- [x] Roteiro de demo gravada (`docs/DEMO-SCRIPT.md`)
 
 ## Fase 3 — Monetização (60 dias)
 

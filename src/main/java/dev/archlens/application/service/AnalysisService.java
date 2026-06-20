@@ -24,10 +24,12 @@ import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.ProjectStatus;
 import dev.archlens.infrastructure.messaging.AnalysisEvent;
 import dev.archlens.infrastructure.messaging.AnalysisProducer;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
+@TenantScopedRls
 @ApplicationScoped
 public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCase, GetAdrsUseCase,
         ListAnalysesForProjectUseCase {

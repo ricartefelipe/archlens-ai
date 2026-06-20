@@ -25,13 +25,17 @@ public class ReportResource {
     }
 
     @GET
-    @Produces({"text/markdown", "application/json"})
+    @Produces({"text/markdown", "application/json", "application/pdf"})
     public Response exportReport(@PathParam("projectId") UUID projectId,
                                  @PathParam("analysisId") UUID analysisId,
                                  @QueryParam("format") @DefaultValue("markdown") String format) {
-        ReportFormat reportFormat = "json".equalsIgnoreCase(format) ? ReportFormat.JSON : ReportFormat.MARKDOWN;
+        ReportFormat reportFormat = switch (format.toLowerCase()) {
+            case "json" -> ReportFormat.JSON;
+            case "pdf" -> ReportFormat.PDF;
+            default -> ReportFormat.MARKDOWN;
+        };
         Report report = exportUseCase.export(projectId, analysisId, reportFormat);
-        return Response.ok(report.body())
+        return Response.ok(report.content())
                 .type(report.contentType())
                 .header("Content-Disposition", "attachment; filename=\"" + report.fileName() + "\"")
                 .build();

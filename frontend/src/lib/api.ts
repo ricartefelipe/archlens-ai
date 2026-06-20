@@ -111,7 +111,7 @@ export async function listQuestions(
 export function reportExportUrl(
   projectId: string,
   analysisId: string,
-  format: 'markdown' | 'json' = 'markdown'
+  format: 'markdown' | 'json' | 'pdf' = 'markdown'
 ): string {
   return `${API_BASE}/v1/projects/${projectId}/analyses/${analysisId}/report?format=${format}`;
 }
@@ -120,7 +120,7 @@ export async function downloadReport(
   tenantId: string,
   projectId: string,
   analysisId: string,
-  format: 'markdown' | 'json'
+  format: 'markdown' | 'json' | 'pdf'
 ): Promise<void> {
   const headers: Record<string, string> = {
     'X-Tenant-Id': tenantId,
@@ -139,7 +139,7 @@ export async function downloadReport(
   const blob = await res.blob();
   const disposition = res.headers.get('Content-Disposition') ?? '';
   const match = disposition.match(/filename="([^"]+)"/);
-  const fileName = match?.[1] ?? `archlens-report.${format === 'json' ? 'json' : 'md'}`;
+  const fileName = match?.[1] ?? `archlens-report.${format === 'json' ? 'json' : format === 'pdf' ? 'pdf' : 'md'}`;
 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement('a');

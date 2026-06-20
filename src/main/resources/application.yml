@@ -114,10 +114,10 @@ quarkus:
       jdbc:
         url: jdbc:postgresql://localhost:5432/archlens
 
-rabbitmq-host: localhost
-rabbitmq-port: 5672
-rabbitmq-username: archlens
-rabbitmq-password: archlens
+rabbitmq-host: ${RABBITMQ_HOST:localhost}
+rabbitmq-port: ${RABBITMQ_PORT:5672}
+rabbitmq-username: ${RABBITMQ_USERNAME:archlens}
+rabbitmq-password: ${RABBITMQ_PASSWORD:archlens}
 
 archlens:
   llm:
@@ -137,6 +137,10 @@ archlens:
     async: ${ARCHLENS_INGEST_ASYNC:true}
   analysis:
     llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:true}
+  rls:
+    enabled: ${ARCHLENS_RLS_ENABLED:false}
+  report:
+    brand-name: ${ARCHLENS_REPORT_BRAND_NAME:ArchLens}
 
 mp:
   messaging:
@@ -169,6 +173,8 @@ mp:
   archlens:
     analysis:
       llm-fallback-enabled: false
+    rls:
+      enabled: true
   quarkus:
     datasource:
       username: ${QUARKUS_DATASOURCE_USERNAME:archlens}

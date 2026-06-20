@@ -19,6 +19,7 @@ import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.ProjectFile;
 import dev.archlens.domain.model.ProjectStatus;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
 
@@ -27,6 +28,7 @@ import java.nio.file.Files;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+@TenantScopedRls
 @ApplicationScoped
 public class UploadService implements UploadProjectUseCase {
 
