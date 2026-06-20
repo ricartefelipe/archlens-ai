@@ -32,7 +32,8 @@
 ## Fase 4 — Escala (90+ dias)
 
 - [ ] Portal de organizações (convites, RBAC)
-- [ ] Analyzers: Terraform, K8s, .NET
+- [x] Analyzer Terraform (`.tf`, `.tfvars`)
+- [ ] Analyzers: K8s, .NET
 - [x] Comparativo before/after entre análises
 - [ ] API pública para integrações
 - [ ] White-label

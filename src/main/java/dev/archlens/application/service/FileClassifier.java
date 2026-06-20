@@ -50,6 +50,7 @@ public class FileClassifier {
         if (fileName.endsWith(".json")) return FileType.JSON;
         if (fileName.endsWith(".md") || fileName.endsWith(".adoc")) return FileType.MARKDOWN;
         if (fileName.endsWith(".sh") || fileName.endsWith(".bash")) return FileType.SHELL;
+        if (fileName.endsWith(".tf") || fileName.endsWith(".tfvars")) return FileType.TERRAFORM;
 
         return FileType.OTHER;
     }

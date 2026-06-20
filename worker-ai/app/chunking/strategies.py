@@ -126,6 +126,40 @@ class SqlChunker(ChunkingStrategy):
         return chunks
 
 
+class TerraformChunker(ChunkingStrategy):
+    _BLOCK = re.compile(
+        r"^\s*(?:resource|module|provider|data|variable|terraform|output)\s+",
+        re.MULTILINE,
+    )
+
+    def __init__(self) -> None:
+        self._fallback = TextChunker()
+
+    def chunk_file(self, file_path: str, content: str) -> list[dict]:
+        boundaries = [m.start() for m in self._BLOCK.finditer(content)]
+        if len(boundaries) < 2:
+            return self._fallback.chunk_file(file_path, content)
+
+        chunks: list[dict] = []
+        for i, start in enumerate(boundaries):
+            end = boundaries[i + 1] if i + 1 < len(boundaries) else len(content)
+            section = content[start:end]
+            if not section.strip():
+                continue
+            chunks.append(
+                {
+                    "content": section,
+                    "chunk_index": len(chunks),
+                    "metadata": {
+                        "file_path": file_path,
+                        "start_char": start,
+                        "end_char": end,
+                    },
+                }
+            )
+        return chunks
+
+
 _EXTENSION_MAP: dict[str, type[ChunkingStrategy]] = {
     ".java": JavaChunker,
     ".kt": JavaChunker,
@@ -133,6 +167,8 @@ _EXTENSION_MAP: dict[str, type[ChunkingStrategy]] = {
     ".yml": YamlChunker,
     ".yaml": YamlChunker,
     ".sql": SqlChunker,
+    ".tf": TerraformChunker,
+    ".tfvars": TerraformChunker,
 }
 
 

@@ -47,8 +47,9 @@
 | # | Item | Status |
 |---|------|--------|
 | 21 | Comparativo before/after entre análises | ✅ |
-| 22 | Analyzers Terraform/K8s/.NET | Pendente |
-| 23 | Portal organizações (RBAC) | Pendente |
+| 22 | Analyzer Terraform (`.tf`, `.tfvars`) | ✅ |
+| 23 | Analyzers K8s/.NET | Pendente |
+| 24 | Portal organizações (RBAC) | Pendente |
 
 ---
 
