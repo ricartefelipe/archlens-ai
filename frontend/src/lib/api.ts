@@ -1,4 +1,5 @@
 import type { Project, ProjectFile, Analysis, Adr, Question } from './types';
+import { getAccessToken } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -12,6 +13,11 @@ async function apiFetch<T>(path: string, tenantId: string, options: RequestInit 
     'X-Correlation-Id': correlationId(),
     ...(options.headers as Record<string, string> || {}),
   };
+
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   if (!(options.body instanceof FormData)) {
     headers['Content-Type'] = 'application/json';
@@ -100,4 +106,45 @@ export async function listQuestions(
     `/v1/projects/${projectId}/analyses/${analysisId}/questions`,
     tenantId
   );
+}
+
+export function reportExportUrl(
+  projectId: string,
+  analysisId: string,
+  format: 'markdown' | 'json' | 'pdf' = 'markdown'
+): string {
+  return `${API_BASE}/v1/projects/${projectId}/analyses/${analysisId}/report?format=${format}`;
+}
+
+export async function downloadReport(
+  tenantId: string,
+  projectId: string,
+  analysisId: string,
+  format: 'markdown' | 'json' | 'pdf'
+): Promise<void> {
+  const headers: Record<string, string> = {
+    'X-Tenant-Id': tenantId,
+    'X-Correlation-Id': correlationId(),
+  };
+  const token = getAccessToken();
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const res = await fetch(reportExportUrl(projectId, analysisId, format), { headers });
+  if (!res.ok) {
+    throw new Error(`Export failed: ${res.status}`);
+  }
+
+  const blob = await res.blob();
+  const disposition = res.headers.get('Content-Disposition') ?? '';
+  const match = disposition.match(/filename="([^"]+)"/);
+  const fileName = match?.[1] ?? `archlens-report.${format === 'json' ? 'json' : format === 'pdf' ? 'pdf' : 'md'}`;
+
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }

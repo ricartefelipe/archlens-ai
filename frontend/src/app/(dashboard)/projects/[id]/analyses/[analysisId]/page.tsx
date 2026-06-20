@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader2, AlertTriangle, ShieldAlert, ShieldCheck, Shield } from 'lucide-react';
+import { Loader2, AlertTriangle, ShieldAlert, ShieldCheck, Shield, Download } from 'lucide-react';
 import { format } from 'date-fns';
-import { getAnalysis, listAdrs } from '@/lib/api';
+import { getAnalysis, listAdrs, downloadReport } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
 import { RiskCard } from '@/components/risk-card';
@@ -36,6 +36,7 @@ export default function AnalysisDetailPage() {
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
   const [adrs, setAdrs] = useState<Adr[]>([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState<'markdown' | 'json' | 'pdf' | null>(null);
 
   const loadData = useCallback(async () => {
     const tenantId = getTenantId();
@@ -104,8 +105,60 @@ export default function AnalysisDetailPage() {
     <div className="p-8 max-w-7xl mx-auto space-y-8">
       <div>
         <div className="flex items-center gap-3 mb-2">
-          <h1 className="text-2xl font-bold text-foreground">Analysis Report</h1>
+          <h1 className="text-2xl font-bold text-foreground">Relatório de Análise</h1>
           <StatusBadge status={analysis.status} size="md" />
+          {analysis.status === 'COMPLETED' && (
+            <div className="ml-auto flex gap-2">
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={async () => {
+                  setExporting('markdown');
+                  try {
+                    await downloadReport(getTenantId(), projectId, analysisId, 'markdown');
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting === 'markdown' ? 'Exportando...' : 'Exportar Markdown'}
+              </button>
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={async () => {
+                  setExporting('json');
+                  try {
+                    await downloadReport(getTenantId(), projectId, analysisId, 'json');
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting === 'json' ? 'Exportando...' : 'Exportar JSON'}
+              </button>
+              <button
+                type="button"
+                disabled={!!exporting}
+                onClick={async () => {
+                  setExporting('pdf');
+                  try {
+                    await downloadReport(getTenantId(), projectId, analysisId, 'pdf');
+                  } finally {
+                    setExporting(null);
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50"
+              >
+                <Download className="w-4 h-4" />
+                {exporting === 'pdf' ? 'Exportando...' : 'Exportar PDF'}
+              </button>
+            </div>
+          )}
         </div>
         <div className="flex gap-4 text-xs text-muted-foreground">
           <span>Created: {format(new Date(analysis.createdAt), 'MMM d, yyyy HH:mm')}</span>

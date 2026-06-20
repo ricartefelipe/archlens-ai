@@ -1,0 +1,11 @@
+{
+  "name": "archlens-e2e",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "test:ci": "playwright test --config=playwright.config.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.51.0"
+  }
+}

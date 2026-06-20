@@ -15,7 +15,9 @@ import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.model.Project;
 import dev.archlens.domain.model.ProjectStatus;
+import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 
+@TenantScopedRls
 @ApplicationScoped
 public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase, GetProjectUseCase {
 
@@ -52,7 +54,8 @@ public class ProjectService implements CreateProjectUseCase, ListProjectsUseCase
 
     @Override
     public Project getById(UUID id) {
-        return projectRepository.findById(id)
+        String tenantId = tenantProvider.getCurrentTenantId();
+        return projectRepository.findByIdAndTenantId(id, tenantId)
                 .orElseThrow(() -> new ProjectNotFoundException(id));
     }
 }

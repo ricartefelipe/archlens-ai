@@ -15,10 +15,12 @@ import dev.archlens.application.port.out.AnalysisRepositoryPort;
 import dev.archlens.application.port.out.ProjectRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.ProjectNotFoundException;
+import dev.archlens.domain.exception.ProjectNotReadyException;
 import dev.archlens.domain.model.Adr;
 import dev.archlens.domain.model.Analysis;
 import dev.archlens.domain.model.AnalysisStatus;
 import dev.archlens.domain.model.Project;
+import dev.archlens.domain.model.ProjectStatus;
 import dev.archlens.infrastructure.messaging.AnalysisEvent;
 import dev.archlens.infrastructure.messaging.AnalysisProducer;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +82,15 @@ class AnalysisServiceTest {
         assertThrows(ProjectNotFoundException.class, () -> service.listByProject(UUID.randomUUID()));
     }
 
+    @Test
+    @DisplayName("create falha quando projeto ainda não está pronto")
+    void createFailsWhenProjectNotReady() {
+        UUID projectId = UUID.randomUUID();
+        projectRepository.addWithStatus(projectId, ProjectStatus.INGESTING);
+
+        assertThrows(ProjectNotReadyException.class, () -> service.create(projectId));
+    }
+
     private static final class RecordingProducer extends AnalysisProducer {
         private final List<AnalysisEvent> events = new ArrayList<>();
 
@@ -137,10 +148,18 @@ class AnalysisServiceTest {
     }
 
     private static final class InMemoryProjectRepository implements ProjectRepositoryPort {
-        private final List<UUID> ids = new ArrayList<>();
+        private final List<Project> projects = new ArrayList<>();
 
         private void add(UUID id) {
-            ids.add(id);
+            addWithStatus(id, ProjectStatus.READY);
+        }
+
+        private void addWithStatus(UUID id, ProjectStatus status) {
+            Project project = new Project();
+            project.setId(id);
+            project.setTenantId("tenant-1");
+            project.setStatus(status);
+            projects.add(project);
         }
 
         @Override
@@ -150,17 +169,29 @@ class AnalysisServiceTest {
 
         @Override
         public Optional<Project> findById(UUID id) {
-            return Optional.empty();
+            return projects.stream().filter(p -> p.getId().equals(id)).findFirst();
+        }
+
+        @Override
+        public Optional<Project> findByIdAndTenantId(UUID id, String tenantId) {
+            return projects.stream()
+                    .filter(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()))
+                    .findFirst();
         }
 
         @Override
         public List<Project> findAllByTenantId(String tenantId) {
-            return List.of();
+            return projects.stream().filter(p -> tenantId.equals(p.getTenantId())).toList();
         }
 
         @Override
         public boolean existsById(UUID id) {
-            return ids.contains(id);
+            return projects.stream().anyMatch(p -> p.getId().equals(id));
+        }
+
+        @Override
+        public boolean existsByIdAndTenantId(UUID id, String tenantId) {
+            return projects.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
         }
     }
 }

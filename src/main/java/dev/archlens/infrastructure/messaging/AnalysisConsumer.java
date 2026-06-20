@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.eclipse.microprofile.reactive.messaging.Incoming;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.jboss.logging.Logger;
 
 import dev.archlens.application.port.out.AdrRepositoryPort;
@@ -20,6 +21,7 @@ import dev.archlens.domain.model.AnalysisStatus;
 import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.RiskCategory;
 import dev.archlens.domain.model.RiskSeverity;
+import dev.archlens.infrastructure.persistence.rls.TenantRlsService;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
@@ -36,15 +38,22 @@ public class AnalysisConsumer {
     private final LlmGateway llmGateway;
     private final AdrRepositoryPort adrRepository;
 
+    @ConfigProperty(name = "archlens.analysis.llm-fallback-enabled", defaultValue = "true")
+    boolean llmFallbackEnabled;
+
+    private final TenantRlsService tenantRlsService;
+
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
                             AnalysisGateway analysisGateway,
                             LlmGateway llmGateway,
-                            AdrRepositoryPort adrRepository) {
+                            AdrRepositoryPort adrRepository,
+                            TenantRlsService tenantRlsService) {
         this.analysisRepository = analysisRepository;
         this.analysisGateway = analysisGateway;
         this.llmGateway = llmGateway;
         this.adrRepository = adrRepository;
+        this.tenantRlsService = tenantRlsService;
     }
 
     @Incoming("analysis-requests-in")
@@ -67,6 +76,8 @@ public class AnalysisConsumer {
             LOG.warnf("Analysis %s not found, skipping", event.analysisId());
             return;
         }
+
+        tenantRlsService.applyTenant(event.tenantId());
 
         try {
             analysis.setStatus(AnalysisStatus.PROCESSING);
@@ -92,7 +103,7 @@ public class AnalysisConsumer {
                 risks.add(risk);
             }
 
-            if (risks.isEmpty()) {
+            if (risks.isEmpty() && llmFallbackEnabled) {
                 LlmAnalysisResult fallback = llmGateway.analyzeProject("Project " + event.projectId());
                 for (var finding : fallback.findings()) {
                     ArchitecturalRisk risk = new ArchitecturalRisk();
@@ -109,6 +120,10 @@ public class AnalysisConsumer {
                     risks.add(risk);
                 }
                 analysis.setSummary(fallback.summary());
+            } else if (risks.isEmpty()) {
+                analysis.setSummary(staticResult.summary() != null
+                        ? staticResult.summary()
+                        : "Nenhum risco identificado pela análise estática.");
             } else {
                 analysis.setSummary(staticResult.summary());
             }
