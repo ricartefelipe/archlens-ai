@@ -84,10 +84,18 @@ export function Sidebar() {
         ))}
 
         <div className="pt-4 pb-1 px-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
+          <Link
+            href="/settings/team"
+            className={clsx(
+              'text-xs font-semibold uppercase tracking-wide flex items-center gap-2 rounded-lg px-3 py-2 -mx-0 transition-colors',
+              settingsActive
+                ? 'text-primary bg-primary/10'
+                : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
+            )}
+          >
             <Settings className="w-3.5 h-3.5" />
             Configurações
-          </p>
+          </Link>
         </div>
 
         {settingsNavItems.map((item) => (
