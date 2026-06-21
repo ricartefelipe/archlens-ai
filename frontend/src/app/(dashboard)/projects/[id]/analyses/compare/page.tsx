@@ -72,7 +72,7 @@ function CompareContent() {
 
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Comparativo before/after</h1>
+          <h1 className="text-2xl font-bold text-foreground">Comparativo antes/depois</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Evolução arquitetural entre duas análises concluídas — ideal para follow-up consultivo.
           </p>

@@ -9,6 +9,7 @@ import { listProjects, createProject } from '@/lib/api';
 import { parseApiError } from '@/lib/api-error';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
+import { OnboardingGuide } from '@/components/onboarding-guide';
 import type { Project } from '@/lib/types';
 
 export default function ProjectsPage() {
@@ -80,6 +81,10 @@ export default function ProjectsPage() {
           <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
           <p>{errorMessage}</p>
         </div>
+      )}
+
+      {!loading && projects.length === 0 && !showForm && (
+        <OnboardingGuide className="mb-8" />
       )}
 
       {showForm && (

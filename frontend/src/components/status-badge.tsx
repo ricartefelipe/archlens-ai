@@ -1,6 +1,7 @@
 'use client';
 
 import clsx from 'clsx';
+import { statusLabel } from '@/lib/labels';
 
 const statusColors: Record<string, string> = {
   CREATED: 'bg-zinc-500/20 text-zinc-400',
@@ -32,7 +33,7 @@ export function StatusBadge({ status, size = 'sm' }: StatusBadgeProps) {
         statusColors[status] || 'bg-zinc-500/20 text-zinc-400'
       )}
     >
-      {status}
+      {statusLabel(status)}
     </span>
   );
 }

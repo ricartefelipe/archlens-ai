@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import type { ArchitecturalRisk } from '@/lib/types';
+import { riskCategoryLabel, severityLabel } from '@/lib/labels';
 
 const severityColors: Record<string, { bg: string; text: string }> = {
   CRITICAL: { bg: 'bg-red-500/20', text: 'text-red-400' },
@@ -33,10 +34,12 @@ export function RiskCard({ risk, defaultExpanded = false }: RiskCardProps) {
           <ChevronRight className="w-4 h-4 text-muted-foreground shrink-0" />
         )}
         <span className={clsx('px-2 py-0.5 rounded text-xs font-medium', colors.bg, colors.text)}>
-          {risk.severity}
+          {severityLabel(risk.severity)}
         </span>
         <span className="text-sm font-medium text-foreground flex-1 truncate">{risk.title}</span>
-        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">{risk.category}</span>
+        <span className="text-xs px-2 py-0.5 rounded bg-secondary text-muted-foreground">
+          {risk.categoryLabel ?? riskCategoryLabel(risk.category)}
+        </span>
         <span className="text-xs text-muted-foreground truncate max-w-[200px]">{risk.filePath}</span>
       </button>
 
@@ -45,7 +48,7 @@ export function RiskCard({ risk, defaultExpanded = false }: RiskCardProps) {
           <p className="text-sm text-foreground">{risk.description}</p>
           {risk.evidence && (
             <div className="bg-background rounded-lg p-3">
-              <p className="text-xs text-muted-foreground mb-1">Evidence</p>
+              <p className="text-xs text-muted-foreground mb-1">Evidência</p>
               <pre className="text-xs text-foreground font-mono whitespace-pre-wrap break-words">
                 {risk.evidence}
               </pre>
@@ -53,7 +56,7 @@ export function RiskCard({ risk, defaultExpanded = false }: RiskCardProps) {
           )}
           {risk.suggestion && (
             <div className="bg-primary/5 rounded-lg p-3">
-              <p className="text-xs text-primary mb-1">Suggestion</p>
+              <p className="text-xs text-primary mb-1">Recomendação</p>
               <p className="text-sm text-foreground">{risk.suggestion}</p>
             </div>
           )}

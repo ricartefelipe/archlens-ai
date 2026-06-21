@@ -990,6 +990,58 @@ class DotNetAnalyzer(BaseAnalyzer):
         return findings
 
 
+class YamlConfigAnalyzer(BaseAnalyzer):
+    _PLAIN_SECRET = re.compile(
+        r"(?i)(?:password|secret|api[-_]?key|access[-_]?token|client[-_]?secret)\s*[:=]\s*"
+        r"(?!\$\{)(?!\$\()[\"']?([^\"'\s${}]{6,})",
+        re.MULTILINE,
+    )
+    _OPEN_CORS = re.compile(
+        r"(?i)(?:allowed-origins|allowedOrigins|cors\.allowed-origins)\s*[:=]\s*[\"']?\*[\"']?",
+        re.MULTILINE,
+    )
+
+    @staticmethod
+    def matches_path(file_path: str) -> bool:
+        lower = file_path.lower()
+        if lower.endswith(".properties"):
+            return "application" in lower or "config" in lower
+        if lower.endswith((".yml", ".yaml")):
+            return "application" in lower or lower.endswith(("config.yml", "config.yaml"))
+        return False
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        if not self.matches_path(file_path):
+            return []
+
+        findings: list[RiskFinding] = []
+        for match in self._PLAIN_SECRET.finditer(content):
+            if match.group(0).strip().endswith(":"):
+                continue
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Segredo em arquivo de configuração",
+                description="Credenciais em plain text em YAML/properties expõem ambientes e impedem rotação segura.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar variáveis de ambiente, Spring Cloud Config, Vault ou placeholders ${ENV}",
+            ))
+
+        if self._OPEN_CORS.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="CORS permissivo (*)",
+                description="Origem wildcard em configuração permite chamadas de qualquer domínio.",
+                file_path=file_path,
+                evidence="allowed-origins: * detectado",
+                suggestion="Restringir origens às URLs do frontend/API conhecidas",
+            ))
+
+        return findings
+
+
 class AnalyzerFactory:
     _ANALYZERS: dict[str, list[type[BaseAnalyzer]]] = {
         ".java": [JavaAnalyzer],
@@ -1020,6 +1072,11 @@ class AnalyzerFactory:
             analyzers.append(PipelineAnalyzer())
         if lower.endswith((".yml", ".yaml")):
             analyzers.append(KubernetesAnalyzer())
+            if YamlConfigAnalyzer.matches_path(lower):
+                analyzers.append(YamlConfigAnalyzer())
+
+        if lower.endswith(".properties") and YamlConfigAnalyzer.matches_path(lower):
+            analyzers.append(YamlConfigAnalyzer())
 
         for ext, analyzer_classes in AnalyzerFactory._ANALYZERS.items():
             if lower.endswith(ext):

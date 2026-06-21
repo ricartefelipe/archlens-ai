@@ -8,6 +8,7 @@ import { getAnalysis, listAdrs, downloadReport } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
 import { RiskCard } from '@/components/risk-card';
+import { severityLabel } from '@/lib/labels';
 import type { Analysis, Adr } from '@/lib/types';
 
 const severityOrder: Record<string, number> = {
@@ -207,7 +208,7 @@ export default function AnalysisDetailPage() {
                 <div key={sev} className={`rounded-xl border p-4 ${severityCardColors[sev]}`}>
                   <div className="flex items-center gap-2 mb-1">
                     <Icon className="w-5 h-5" />
-                    <span className="text-sm font-medium">{sev}</span>
+                    <span className="text-sm font-medium">{severityLabel(sev)}</span>
                   </div>
                   <p className="text-3xl font-bold">{count}</p>
                 </div>

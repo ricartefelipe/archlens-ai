@@ -14,6 +14,7 @@ import { getTenantId } from '@/lib/auth';
 import { analysisBlockReason, isProjectBusy, projectBusyMessage } from '@/lib/project-status';
 import { StatusBadge } from '@/components/status-badge';
 import { FileDropZone } from '@/components/file-drop-zone';
+import { OnboardingGuide } from '@/components/onboarding-guide';
 import type { Project, ProjectFile, Analysis } from '@/lib/types';
 
 type Tab = 'upload' | 'files' | 'analyses';
@@ -303,8 +304,11 @@ export default function ProjectDetailPage() {
       </div>
 
       {tab === 'upload' && (
-        <div className="max-w-xl">
-          <FileDropZone onFileSelected={handleUpload} loading={uploading} />
+        <div className="max-w-3xl space-y-6">
+          {files.length === 0 && <OnboardingGuide compact />}
+          <div className="max-w-xl">
+            <FileDropZone onFileSelected={handleUpload} loading={uploading} />
+          </div>
         </div>
       )}
 

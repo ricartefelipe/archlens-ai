@@ -29,7 +29,7 @@ const settingsNavItems = [
 ];
 
 const adminNavItems = [
-  { href: '/admin/tenants', label: 'Tenants', icon: Shield },
+  { href: '/admin/tenants', label: 'Contas', icon: Shield },
 ];
 
 function NavLink({

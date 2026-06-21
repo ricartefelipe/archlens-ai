@@ -22,7 +22,7 @@ test.describe('Comparativo ArchLens', () => {
       `/projects/${projectId}/analyses/compare?baseline=${baseline}&current=${current}`
     );
 
-    await expect(page.getByRole('heading', { name: 'Comparativo before/after' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Comparativo antes/depois' })).toBeVisible();
     // Sem backend no E2E, a comparação falha na API — validamos que a página tenta carregar.
     await expect(page.getByText(/Failed to fetch|Selecione duas análises/i)).toBeVisible();
   });

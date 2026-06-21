@@ -88,7 +88,7 @@ public class ComparisonExportService implements ExportComparisonReportUseCase {
 
     private String buildMarkdown(Project project, AnalysisComparisonResult comparison) {
         StringBuilder md = new StringBuilder();
-        md.append("# Relatório Comparativo Before/After — ArchLens\n\n");
+        md.append("# Relatório Comparativo Antes/Depois — ArchLens\n\n");
         md.append("| Campo | Valor |\n|---|---|\n");
         md.append("| Projeto | ").append(escape(project.getName())).append(" |\n");
         md.append("| Tenant | ").append(escape(project.getTenantId())).append(" |\n");

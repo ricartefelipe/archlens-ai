@@ -119,11 +119,15 @@ for _ in $(seq 1 90); do
     -H "X-Tenant-Id: $TENANT")
   STATUS=$(python3 -c "import json,sys; print(json.load(sys.stdin)['status'])" <<<"$A")
   if [[ "$STATUS" == "COMPLETED" ]]; then
-    RISKS=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('riskCount',0))" <<<"$A")
+    RISKS=$(python3 -c "import json,sys; print(len(json.load(sys.stdin).get('risks',[])))" <<<"$A")
+    SUMMARY=$(python3 -c "import json,sys; print(json.load(sys.stdin).get('summary','')[:120])" <<<"$A")
     echo ""
     echo "✔ Demo pronto"
     echo "  Projeto:  $BASE/projects/$PROJECT_ID"
-    echo "  Análise:  $STATUS ($RISKS riscos)"
+    echo "  Análise:  $BASE/projects/$PROJECT_ID/analyses/$ANALYSIS_ID"
+    echo "  Chat:     $BASE/projects/$PROJECT_ID/chat?analysisId=$ANALYSIS_ID"
+    echo "  Export:   $BASE/v1/projects/$PROJECT_ID/analyses/$ANALYSIS_ID/report?format=pdf"
+    echo "  Riscos:   $RISKS — ${SUMMARY}"
     echo "  Login:    $EMAIL / $PASSWORD"
     exit 0
   fi

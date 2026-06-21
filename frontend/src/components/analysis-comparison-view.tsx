@@ -3,8 +3,10 @@
 import { ArrowDownRight, ArrowUpRight, Minus, TrendingDown, TrendingUp } from 'lucide-react';
 import clsx from 'clsx';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { RiskCard } from '@/components/risk-card';
 import type { AnalysisComparison, ArchitecturalRisk } from '@/lib/types';
+import { severityLabel } from '@/lib/labels';
 
 const severities = ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'] as const;
 
@@ -28,7 +30,9 @@ function SeverityDeltaCards({ comparison }: AnalysisComparisonViewProps) {
         const delta = after - before;
         return (
           <div key={severity} className="bg-card border border-border rounded-xl p-4">
-            <p className={clsx('text-xs font-semibold mb-2', severityColors[severity])}>{severity}</p>
+            <p className={clsx('text-xs font-semibold mb-2', severityColors[severity])}>
+              {severityLabel(severity)}
+            </p>
             <div className="flex items-end justify-between gap-2">
               <div>
                 <p className="text-xs text-muted-foreground">Antes</p>
@@ -98,16 +102,16 @@ export function AnalysisComparisonView({ comparison }: AnalysisComparisonViewPro
     <div className="space-y-6">
       <div className="grid md:grid-cols-2 gap-4">
         <div className="bg-card border border-border rounded-xl p-4">
-          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Baseline (antes)</p>
+          <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Referência (antes)</p>
           <p className="text-sm font-medium text-foreground">
-            {format(new Date(comparison.baseline.createdAt), 'dd MMM yyyy HH:mm')}
+            {format(new Date(comparison.baseline.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
           </p>
           <p className="text-xs text-muted-foreground mt-1">{comparison.baseline.riskCount} riscos</p>
         </div>
         <div className="bg-card border border-primary/30 rounded-xl p-4">
           <p className="text-xs uppercase tracking-wide text-primary mb-1">Atual (depois)</p>
           <p className="text-sm font-medium text-foreground">
-            {format(new Date(comparison.current.createdAt), 'dd MMM yyyy HH:mm')}
+            {format(new Date(comparison.current.createdAt), 'dd/MM/yyyy HH:mm', { locale: ptBR })}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             {comparison.current.riskCount} riscos
@@ -144,9 +148,11 @@ export function AnalysisComparisonView({ comparison }: AnalysisComparisonViewPro
               <div key={change.currentRisk.id} className="border border-border rounded-lg p-3">
                 <p className="text-sm font-medium text-foreground mb-2">{change.currentRisk.title}</p>
                 <div className="flex items-center gap-2 text-xs">
-                  <span className="text-muted-foreground">{change.baselineRisk.severity}</span>
+                  <span className="text-muted-foreground">{severityLabel(change.baselineRisk.severity)}</span>
                   <span className="text-muted-foreground">→</span>
-                  <span className={severityColors[change.currentRisk.severity]}>{change.currentRisk.severity}</span>
+                  <span className={severityColors[change.currentRisk.severity]}>
+                    {severityLabel(change.currentRisk.severity)}
+                  </span>
                   <span className="text-muted-foreground truncate">{change.currentRisk.filePath}</span>
                 </div>
               </div>

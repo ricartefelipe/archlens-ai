@@ -10,7 +10,7 @@ from app.analysis.analyzers import (
     PipelineAnalyzer,
     PythonAnalyzer,
     TerraformAnalyzer,
-    TypeScriptAnalyzer,
+    YamlConfigAnalyzer,
 )
 from app.analysis.rules import RiskCategory, RiskSeverity
 
@@ -168,6 +168,21 @@ def test_dotnet_analyzer_clean_class_has_no_findings():
     }
     """
     assert DotNetAnalyzer().analyze("Money.cs", content) == []
+
+
+def test_yaml_config_analyzer_flags_secrets_and_open_cors():
+    content = """
+spring:
+  datasource:
+    password: super-secret-db
+  cors:
+    allowed-origins: "*"
+"""
+    findings = YamlConfigAnalyzer().analyze("application.yml", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
 
 
 def test_analyzer_factory_dispatch():

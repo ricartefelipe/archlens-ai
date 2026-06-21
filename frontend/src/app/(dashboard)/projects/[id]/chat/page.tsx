@@ -116,7 +116,7 @@ export default function ChatPage() {
         </p>
         {analysisId && (
           <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
-            Analysis: {analysisId}
+            Análise: {analysisId}
           </p>
         )}
       </div>
