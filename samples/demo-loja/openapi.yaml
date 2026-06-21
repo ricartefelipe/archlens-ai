@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Demo Loja API
+  version: 1.0.0
+paths:
+  /orders:
+    get:
+      summary: Lista pedidos
+      responses:
+        "200":
+          description: OK
+    post:
+      summary: Cria pedido
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customerEmail:
+                  type: string
+                total:
+                  type: number
+      responses:
+        "201":
+          description: Created
+  /orders/{id}:
+    get:
+      summary: Detalhe do pedido
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
