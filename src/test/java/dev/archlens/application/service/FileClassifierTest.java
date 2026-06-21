@@ -58,6 +58,9 @@ class FileClassifierTest {
                 () -> assertEquals(FileType.DOTNET, classifier.classify("Controllers/OrderController.cs")),
                 () -> assertEquals(FileType.KOTLIN, classifier.classify("Main.kt")),
                 () -> assertEquals(FileType.PYTHON, classifier.classify("app/main.py")),
+                () -> assertEquals(FileType.GO, classifier.classify("cmd/server/main.go")),
+                () -> assertEquals(FileType.TYPESCRIPT, classifier.classify("src/App.tsx")),
+                () -> assertEquals(FileType.TYPESCRIPT, classifier.classify("lib/utils.ts")),
                 () -> assertEquals(FileType.SQL, classifier.classify("db/001.sql")),
                 () -> assertEquals(FileType.TERRAFORM, classifier.classify("infra/main.tf")),
                 () -> assertEquals(FileType.TERRAFORM, classifier.classify("env/prod.tfvars")),
@@ -76,7 +79,8 @@ class FileClassifierTest {
                 () -> assertFalse(classifier.isRelevant("data.bin")),
                 () -> assertTrue(classifier.isRelevant("src/main/java/App.java")),
                 () -> assertTrue(classifier.isRelevant("src/Program.cs")),
-                () -> assertTrue(classifier.isRelevant("infra/main.tf")),
+                () -> assertFalse(classifier.isRelevant("vendor/github.com/lib/main.go")),
+                () -> assertTrue(classifier.isRelevant("cmd/api/main.go")),
                 () -> assertTrue(classifier.isRelevant("pom.xml")));
     }
 }

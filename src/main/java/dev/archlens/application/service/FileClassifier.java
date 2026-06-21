@@ -42,6 +42,11 @@ public class FileClassifier {
 
         if (fileName.endsWith(".java")) return FileType.JAVA;
         if (fileName.endsWith(".cs")) return FileType.DOTNET;
+        if (fileName.endsWith(".go")) return FileType.GO;
+        if (fileName.endsWith(".ts") || fileName.endsWith(".tsx")
+                || fileName.endsWith(".js") || fileName.endsWith(".jsx")) {
+            return FileType.TYPESCRIPT;
+        }
         if (fileName.endsWith(".kt") || fileName.endsWith(".kts")) return FileType.KOTLIN;
         if (fileName.endsWith(".py")) return FileType.PYTHON;
         if (fileName.endsWith(".sql")) return FileType.SQL;
@@ -61,7 +66,7 @@ public class FileClassifier {
         if (lower.contains("node_modules/") || lower.contains("target/")
                 || lower.contains("build/") || lower.contains(".git/")
                 || lower.contains("__pycache__/") || lower.contains(".gradle/")
-                || lower.contains(".idea/") || lower.contains(".vscode/")) {
+                || lower.contains("vendor/") || lower.contains(".idea/") || lower.contains(".vscode/")) {
             return false;
         }
         String fileName = lower.contains("/") ? lower.substring(lower.lastIndexOf('/') + 1) : lower;
