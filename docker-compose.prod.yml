@@ -1,0 +1,194 @@
+# Stack produção / piloto AWS — EC2 + Docker Compose + Nginx + Keycloak OIDC.
+# Uso:
+#   cp .env.aws-pilot.example .env.aws-pilot && editar secrets
+#   ./scripts/generate-keycloak-realm-prod.sh https://SEU-DOMINIO
+#   docker compose --env-file .env.aws-pilot -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: archlens
+      POSTGRES_USER: archlens
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U archlens -d archlens"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    ports:
+      - "127.0.0.1:5432:5432"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USERNAME:-archlens}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?defina RABBITMQ_PASSWORD}
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+    ports:
+      - "127.0.0.1:5672:5672"
+      - "127.0.0.1:15672:15672"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: start --import-realm --hostname=${DOMAIN} --http-relative-path=/auth --http-enabled=true --proxy-headers=xforwarded
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: archlens
+      KC_DB_PASSWORD: ${POSTGRES_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?defina KEYCLOAK_ADMIN_PASSWORD}
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_HOSTNAME: ${DOMAIN:?defina DOMAIN}
+      KC_HOSTNAME_STRICT: "false"
+    volumes:
+      - ./infra/keycloak/realm-prod.json:/opt/keycloak/data/import/realm-archlens.json:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8180:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
+  worker-ai:
+    build:
+      context: ./worker-ai
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://archlens:${POSTGRES_PASSWORD}@postgres:5432/archlens
+      STORAGE_BASE_PATH: /data/projects
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-local}
+      EMBEDDING_DIMENSION: ${EMBEDDING_DIMENSION:-1536}
+      EMBEDDING_DIMENSION_VERIFY: ${EMBEDDING_DIMENSION_VERIFY:-true}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      LOG_LEVEL: INFO
+    volumes:
+      - projectdata:/data/projects
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      QUARKUS_PROFILE: prod
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/archlens
+      QUARKUS_DATASOURCE_USERNAME: archlens
+      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-archlens}
+      RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      WORKER_AI_BASE_URL: http://worker-ai:8000
+      ARCHLENS_STORAGE_BASE_PATH: /data/projects
+      ARCHLENS_LLM_PROVIDER: ${ARCHLENS_LLM_PROVIDER:-local}
+      ARCHLENS_LLM_OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      ARCHLENS_ANALYSIS_LLM_FALLBACK: "false"
+      ARCHLENS_RLS_ENABLED: "true"
+      ARCHLENS_ENFORCE_QUOTAS: "true"
+      ARCHLENS_REPORT_BRAND_NAME: ${ARCHLENS_REPORT_BRAND_NAME:-ArchLens AI}
+      ARCHLENS_REPORT_LOGO_URL: ${ARCHLENS_REPORT_LOGO_URL:-}
+      OIDC_AUTH_SERVER_URL: ${KEYCLOAK_ISSUER_URL:?defina KEYCLOAK_ISSUER_URL}
+      CORS_ORIGINS: ${APP_URL:?defina APP_URL}
+    volumes:
+      - projectdata:/data/projects
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      worker-ai:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    ports:
+      - "127.0.0.1:8080:8080"
+    deploy:
+      resources:
+        limits:
+          memory: 1024M
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${APP_URL}
+        NEXT_PUBLIC_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL}
+        NEXT_PUBLIC_KEYCLOAK_REALM: archlens
+        NEXT_PUBLIC_KEYCLOAK_CLIENT: archlens-frontend
+        NEXT_PUBLIC_OIDC_ENABLED: "true"
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ArchLens AI}
+        NEXT_PUBLIC_APP_LOGO_URL: ${NEXT_PUBLIC_APP_LOGO_URL:-}
+        NEXT_PUBLIC_PRIMARY_COLOR: ${NEXT_PUBLIC_PRIMARY_COLOR:-#2563eb}
+        NEXT_PUBLIC_LANDING_URL: ${NEXT_PUBLIC_LANDING_URL:-}
+        NEXT_PUBLIC_SUPPORT_URL: ${NEXT_PUBLIC_SUPPORT_URL:-}
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+    depends_on:
+      backend:
+        condition: service_started
+    ports:
+      - "127.0.0.1:3000:3000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/conf.d/default-pilot-active.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+      keycloak:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
+volumes:
+  postgres_data:
+  rabbitmq_data:
+  projectdata:
