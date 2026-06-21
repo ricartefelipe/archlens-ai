@@ -1,15 +1,17 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Play, MessageSquare, FileCode, BarChart3, GitCompare } from 'lucide-react';
+import { Loader2, Play, MessageSquare, FileCode, BarChart3, GitCompare, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import {
   getProject, listProjectFiles, listAnalyses,
   uploadProjectZip, createAnalysis, getAnalysis,
 } from '@/lib/api';
+import { parseApiError } from '@/lib/api-error';
 import { getTenantId } from '@/lib/auth';
+import { analysisBlockReason, isProjectBusy, projectBusyMessage } from '@/lib/project-status';
 import { StatusBadge } from '@/components/status-badge';
 import { FileDropZone } from '@/components/file-drop-zone';
 import type { Project, ProjectFile, Analysis } from '@/lib/types';
@@ -42,8 +44,11 @@ export default function ProjectDetailPage() {
   );
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [lastUploadName, setLastUploadName] = useState<string | null>(null);
+  const didAutoSelectTab = useRef(false);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (options?: { preserveTab?: boolean }) => {
     const tenantId = getTenantId();
     try {
       const [proj, fileList, analysisList] = await Promise.all([
@@ -54,9 +59,18 @@ export default function ProjectDetailPage() {
       setProject(proj);
       setFiles(fileList);
       setAnalyses(analysisList);
-      if (fileList.length > 0 && !initialTab) setTab('files');
+      if (
+        !options?.preserveTab
+        && !didAutoSelectTab.current
+        && fileList.length > 0
+        && !initialTab
+      ) {
+        setTab('files');
+        didAutoSelectTab.current = true;
+      }
     } catch (err) {
       console.error('Failed to load project data:', err);
+      setErrorMessage(parseApiError(err));
     } finally {
       setLoading(false);
     }
@@ -101,21 +115,47 @@ export default function ProjectDetailPage() {
     return () => clearInterval(interval);
   }, [pollingIds, projectId]);
 
+  useEffect(() => {
+    if (!project || !isProjectBusy(project)) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      void loadData({ preserveTab: true });
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [project?.status, project?.id, loadData]);
+
   async function handleUpload(file: File) {
     setUploading(true);
+    setErrorMessage(null);
+    setLastUploadName(file.name);
     try {
       await uploadProjectZip(getTenantId(), projectId, file);
-      await loadData();
+      await loadData({ preserveTab: true });
       setTab('files');
     } catch (err) {
       console.error('Upload failed:', err);
+      setErrorMessage(parseApiError(err));
     } finally {
       setUploading(false);
     }
   }
 
   async function handleRunAnalysis() {
+    if (!project) {
+      return;
+    }
+
+    const blockReason = analysisBlockReason(project);
+    if (blockReason) {
+      setErrorMessage(blockReason);
+      return;
+    }
+
     setCreatingAnalysis(true);
+    setErrorMessage(null);
     try {
       const analysis = await createAnalysis(getTenantId(), projectId);
       setAnalyses((prev) => [analysis, ...prev]);
@@ -123,6 +163,7 @@ export default function ProjectDetailPage() {
       setTab('analyses');
     } catch (err) {
       console.error('Failed to create analysis:', err);
+      setErrorMessage(parseApiError(err));
     } finally {
       setCreatingAnalysis(false);
     }
@@ -155,6 +196,8 @@ export default function ProjectDetailPage() {
   }
 
   const completedAnalyses = analyses.filter((a) => a.status === 'COMPLETED');
+  const analysisBlocked = project ? analysisBlockReason(project) : 'Carregando projeto…';
+  const busyMessage = project ? projectBusyMessage(project) : null;
 
   if (loading) {
     return (
@@ -206,7 +249,8 @@ export default function ProjectDetailPage() {
           </button>
           <button
             onClick={handleRunAnalysis}
-            disabled={creatingAnalysis}
+            disabled={creatingAnalysis || !!analysisBlocked}
+            title={analysisBlocked ?? undefined}
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 disabled:opacity-50 transition-colors"
           >
             {creatingAnalysis ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -214,6 +258,31 @@ export default function ProjectDetailPage() {
           </button>
         </div>
       </div>
+
+      {(errorMessage || uploading || busyMessage) && (
+        <div className="mb-6 space-y-2">
+          {errorMessage && (
+            <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+              <p>{errorMessage}</p>
+            </div>
+          )}
+          {(uploading || busyMessage) && (
+            <div className="flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary shrink-0" />
+              <p>
+                {uploading
+                  ? `Enviando ${lastUploadName ?? 'ZIP'}…`
+                  : busyMessage}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {analysisBlocked && !errorMessage && (
+        <p className="mb-4 text-xs text-muted-foreground">{analysisBlocked}</p>
+      )}
 
       <div className="flex gap-1 mb-6 border-b border-border">
         {tabs.map((t) => (
@@ -241,6 +310,13 @@ export default function ProjectDetailPage() {
 
       {tab === 'files' && (
         <div className="bg-card rounded-xl border border-border overflow-hidden">
+          {files.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-muted-foreground">
+              {project.status === 'UPLOADING'
+                ? 'Substituindo arquivos do upload em andamento…'
+                : 'Nenhum arquivo indexado. Use a aba Upload.'}
+            </p>
+          ) : (
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
@@ -261,6 +337,7 @@ export default function ProjectDetailPage() {
               ))}
             </tbody>
           </table>
+          )}
         </div>
       )}
 

@@ -93,9 +93,21 @@ class AnalysisServiceTest {
     @DisplayName("create falha quando projeto ainda não está pronto")
     void createFailsWhenProjectNotReady() {
         UUID projectId = UUID.randomUUID();
-        projectRepository.addWithStatus(projectId, ProjectStatus.INGESTING);
+        projectRepository.addWithStatus(projectId, ProjectStatus.CREATED, 0);
 
         assertThrows(ProjectNotReadyException.class, () -> service.create(projectId));
+    }
+
+    @Test
+    @DisplayName("create permite projeto em ingestão com arquivos")
+    void createAllowsProjectWhileIngesting() {
+        UUID projectId = UUID.randomUUID();
+        projectRepository.addWithStatus(projectId, ProjectStatus.INGESTING, 3);
+
+        Analysis analysis = service.create(projectId);
+
+        assertEquals(AnalysisStatus.PENDING, analysis.getStatus());
+        assertEquals(1, producer.events.size());
     }
 
     private static final class RecordingProducer extends AnalysisProducer {
@@ -158,14 +170,19 @@ class AnalysisServiceTest {
         private final List<Project> projects = new ArrayList<>();
 
         private void add(UUID id) {
-            addWithStatus(id, ProjectStatus.READY);
+            addWithStatus(id, ProjectStatus.READY, 1);
         }
 
         private void addWithStatus(UUID id, ProjectStatus status) {
+            addWithStatus(id, status, 1);
+        }
+
+        private void addWithStatus(UUID id, ProjectStatus status, int fileCount) {
             Project project = new Project();
             project.setId(id);
             project.setTenantId("tenant-1");
             project.setStatus(status);
+            project.setFileCount(fileCount);
             projects.add(project);
         }
 

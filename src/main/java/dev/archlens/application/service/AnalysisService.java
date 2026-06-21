@@ -69,7 +69,7 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
 
         Project project = projectRepository.findByIdAndTenantId(projectId, tenantId)
                 .orElseThrow(() -> new ProjectNotFoundException(projectId));
-        if (project.getStatus() != ProjectStatus.READY && project.getStatus() != ProjectStatus.UPLOADED) {
+        if (!isReadyForAnalysis(project)) {
             throw new ProjectNotReadyException(projectId, project.getStatus());
         }
 
@@ -119,5 +119,15 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
                 .filter(a -> tenantId.equals(a.getTenantId()))
                 .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
         return adrRepository.findByAnalysisId(analysis.getId());
+    }
+
+    private static boolean isReadyForAnalysis(Project project) {
+        if (project.getFileCount() <= 0) {
+            return false;
+        }
+        return switch (project.getStatus()) {
+            case UPLOADED, INGESTING, READY -> true;
+            case CREATED, UPLOADING, FAILED -> false;
+        };
     }
 }
