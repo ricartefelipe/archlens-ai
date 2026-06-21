@@ -32,8 +32,11 @@ $COMPOSE $CF run --rm --entrypoint sh certbot -c "chmod 644 /etc/letsencrypt/arc
 sed "s/__ARCHLENS_DOMAIN__/${ARCHLENS_DOMAIN}/g" \
   deploy/nginx/conf.d/default-pilot-ssl.conf > deploy/nginx/conf.d/default-pilot-active.conf
 
-$COMPOSE $CF up -d nginx certbot-renew
+$COMPOSE $CF up -d --force-recreate nginx certbot-renew
 sleep 5
+# Garante bind em :443 após trocar default-pilot-active.conf (volume bind não recarrega sozinho).
+$COMPOSE $CF exec -T nginx nginx -s reload || true
+sleep 2
 
 $COMPOSE $CF up -d --force-recreate backend frontend keycloak
 sleep 15

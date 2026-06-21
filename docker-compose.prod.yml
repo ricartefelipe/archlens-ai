@@ -51,7 +51,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:26.0
     restart: unless-stopped
-    command: start --import-realm --hostname=${DOMAIN} --http-relative-path=/auth --http-enabled=true --proxy-headers=xforwarded
+    command: start --import-realm --hostname=https://${DOMAIN}/auth --http-relative-path=/auth --http-enabled=true --proxy-headers=xforwarded --hostname-backchannel-dynamic=true
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
@@ -60,8 +60,8 @@ services:
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?defina KEYCLOAK_ADMIN_PASSWORD}
       KC_HTTP_RELATIVE_PATH: /auth
-      KC_HOSTNAME: ${DOMAIN:?defina DOMAIN}
-      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME: https://${DOMAIN}/auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
     volumes:
       - ./infra/keycloak/realm-prod.json:/opt/keycloak/data/import/realm-archlens.json:ro
     depends_on:
@@ -120,7 +120,9 @@ services:
       ARCHLENS_ENFORCE_QUOTAS: "true"
       ARCHLENS_REPORT_BRAND_NAME: ${ARCHLENS_REPORT_BRAND_NAME:-ArchLens AI}
       ARCHLENS_REPORT_LOGO_URL: ${ARCHLENS_REPORT_LOGO_URL:-}
-      OIDC_AUTH_SERVER_URL: ${KEYCLOAK_ISSUER_URL:?defina KEYCLOAK_ISSUER_URL}
+      OIDC_AUTH_SERVER_URL: http://keycloak:8080/auth/realms/archlens
+      QUARKUS_OIDC_TOKEN_ISSUER: ${KEYCLOAK_ISSUER_URL:?defina KEYCLOAK_ISSUER_URL}
+      QUARKUS_OIDC_JWKS_PATH: /protocol/openid-connect/certs
       CORS_ORIGINS: ${APP_URL:?defina APP_URL}
     volumes:
       - projectdata:/data/projects

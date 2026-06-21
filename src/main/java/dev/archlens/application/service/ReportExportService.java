@@ -1,6 +1,7 @@
 package dev.archlens.application.service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -101,7 +102,7 @@ public class ReportExportService implements ExportAnalysisReportUseCase {
         md.append("| Projeto | ").append(escape(project.getName())).append(" |\n");
         md.append("| Tenant | ").append(escape(project.getTenantId())).append(" |\n");
         md.append("| Status da análise | ").append(analysis.getStatus()).append(" |\n");
-        md.append("| Gerado em | ").append(DATE_FMT.format(analysis.getUpdatedAt())).append(" |\n\n");
+        md.append("| Gerado em | ").append(formatInstant(analysis.getUpdatedAt())).append(" |\n\n");
 
         md.append("## Sumário executivo\n\n");
         md.append(analysis.getSummary() != null ? analysis.getSummary() : "_Sem resumo disponível._").append("\n\n");
@@ -185,5 +186,12 @@ public class ReportExportService implements ExportAnalysisReportUseCase {
             return "";
         }
         return value.replace("|", "\\|").replace("\n", " ");
+    }
+
+    private static String formatInstant(java.time.Instant instant) {
+        if (instant == null) {
+            return "";
+        }
+        return DATE_FMT.format(instant.atZone(ZoneOffset.UTC));
     }
 }

@@ -1,6 +1,8 @@
 package dev.archlens.application.service;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -90,9 +92,9 @@ public class ComparisonExportService implements ExportComparisonReportUseCase {
         md.append("| Campo | Valor |\n|---|---|\n");
         md.append("| Projeto | ").append(escape(project.getName())).append(" |\n");
         md.append("| Tenant | ").append(escape(project.getTenantId())).append(" |\n");
-        md.append("| Baseline | ").append(DATE_FMT.format(comparison.getBaseline().createdAt()))
+        md.append("| Baseline | ").append(formatInstant(comparison.getBaseline().createdAt()))
                 .append(" (").append(comparison.getBaseline().riskCount()).append(" riscos) |\n");
-        md.append("| Atual | ").append(DATE_FMT.format(comparison.getCurrent().createdAt()))
+        md.append("| Atual | ").append(formatInstant(comparison.getCurrent().createdAt()))
                 .append(" (").append(comparison.getCurrent().riskCount()).append(" riscos) |\n");
 
         int delta = comparison.getCurrent().riskCount() - comparison.getBaseline().riskCount();
@@ -189,5 +191,12 @@ public class ComparisonExportService implements ExportComparisonReportUseCase {
             return "";
         }
         return value.replace("|", "\\|").replace("\n", " ");
+    }
+
+    private static String formatInstant(Instant instant) {
+        if (instant == null) {
+            return "";
+        }
+        return DATE_FMT.format(instant.atZone(ZoneOffset.UTC));
     }
 }

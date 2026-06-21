@@ -26,9 +26,11 @@ import dev.archlens.domain.model.RiskSeverity;
 import dev.archlens.application.service.QuotaService;
 import dev.archlens.application.service.WebhookService;
 import dev.archlens.infrastructure.persistence.rls.TenantRlsService;
+import dev.archlens.interfaces.rest.context.RequestScopedTenantProvider;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.json.JsonObject;
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.enterprise.context.control.ActivateRequestContext;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 
@@ -48,6 +50,7 @@ public class AnalysisConsumer {
     private final TenantRlsService tenantRlsService;
     private final QuotaService quotaService;
     private final WebhookService webhookService;
+    private final RequestScopedTenantProvider requestTenantProvider;
 
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
@@ -56,7 +59,8 @@ public class AnalysisConsumer {
                             AdrRepositoryPort adrRepository,
                             TenantRlsService tenantRlsService,
                             QuotaService quotaService,
-                            WebhookService webhookService) {
+                            WebhookService webhookService,
+                            RequestScopedTenantProvider requestTenantProvider) {
         this.analysisRepository = analysisRepository;
         this.analysisGateway = analysisGateway;
         this.llmGateway = llmGateway;
@@ -64,10 +68,12 @@ public class AnalysisConsumer {
         this.tenantRlsService = tenantRlsService;
         this.quotaService = quotaService;
         this.webhookService = webhookService;
+        this.requestTenantProvider = requestTenantProvider;
     }
 
     @Incoming("analysis-requests-in")
     @Blocking
+    @ActivateRequestContext
     @Transactional
     public void processAnalysis(JsonObject payload) {
         LOG.infof("Received analysis message: %s", payload.encode());
@@ -79,6 +85,9 @@ public class AnalysisConsumer {
 
         LOG.infof("Processing analysis event: analysisId=%s, projectId=%s", event.analysisId(), event.projectId());
 
+        requestTenantProvider.setTenantId(event.tenantId());
+        tenantRlsService.applyTenant(event.tenantId());
+
         Analysis analysis = analysisRepository.findById(event.analysisId())
                 .orElse(null);
 
@@ -86,8 +95,6 @@ public class AnalysisConsumer {
             LOG.warnf("Analysis %s not found, skipping", event.analysisId());
             return;
         }
-
-        tenantRlsService.applyTenant(event.tenantId());
 
         try {
             analysis.setStatus(AnalysisStatus.PROCESSING);
