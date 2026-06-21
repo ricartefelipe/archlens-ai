@@ -51,6 +51,7 @@
 - [x] RLS tabelas plataforma (migration 008)
 - [x] Página aceitar convite (`/invite`)
 - [x] Bootstrap ORG_ADMIN no primeiro acesso
+- [x] Deploy AWS EC2 + Keycloak OIDC (`docs/DEPLOY-AWS-EC2.md`)
 
 ## Fase 5 — SaaS (opcional, se mudar estratégia)
 
