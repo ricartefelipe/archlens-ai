@@ -15,9 +15,8 @@ import type {
   TenantWebhook,
   AdminTenant,
 } from './types';
+import { getApiBase } from './api-base';
 import { getAccessToken } from './auth';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
 function correlationId(): string {
   return crypto.randomUUID();
@@ -39,7 +38,7 @@ async function apiFetch<T>(path: string, tenantId: string, options: RequestInit 
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
 
   if (!res.ok) {
     const text = await res.text().catch(() => '');
@@ -146,7 +145,7 @@ export function reportExportUrl(
   analysisId: string,
   format: 'markdown' | 'json' | 'pdf' = 'markdown'
 ): string {
-  return `${API_BASE}/v1/projects/${projectId}/analyses/${analysisId}/report?format=${format}`;
+  return `${getApiBase()}/v1/projects/${projectId}/analyses/${analysisId}/report?format=${format}`;
 }
 
 export async function downloadReport(
@@ -193,7 +192,7 @@ export function comparisonReportUrl(
     current: currentAnalysisId,
     format,
   });
-  return `${API_BASE}/v1/projects/${projectId}/analyses/compare/report?${params}`;
+  return `${getApiBase()}/v1/projects/${projectId}/analyses/compare/report?${params}`;
 }
 
 export async function downloadComparisonReport(

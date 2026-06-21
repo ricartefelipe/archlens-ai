@@ -1,3 +1,5 @@
+import { getApiBase } from './api-base';
+
 const TOKEN_KEY = 'archlens_access_token';
 const TENANT_KEY = 'archlens_tenant';
 
@@ -54,9 +56,7 @@ export function isProductionAuth(): boolean {
 }
 
 export async function loginWithPassword(email: string, password: string): Promise<void> {
-  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
-
-  const res = await fetch(`${apiBase}/public/auth/login`, {
+  const res = await fetch(`${getApiBase()}/public/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.trim(), password }),
