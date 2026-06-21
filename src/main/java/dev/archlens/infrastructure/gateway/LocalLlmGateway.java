@@ -67,10 +67,6 @@ public class LocalLlmGateway implements LlmGateway {
     @Override
     public String answerQuestion(String question, String analysisContext) {
         LOG.debugf("LocalLlmGateway: pergunta recebida — %s", question);
-
-        return "Com base na análise do projeto, a arquitetura atual apresenta pontos de atenção "
-                + "que devem ser endereçados para garantir a evolução sustentável do sistema. "
-                + "Em ambiente de desenvolvimento local, utilize um serviço de inferência configurável "
-                + "(ver documentação do projeto e variáveis de ambiente).";
+        return ContextualRagAnswerBuilder.build(question, analysisContext);
     }
 }

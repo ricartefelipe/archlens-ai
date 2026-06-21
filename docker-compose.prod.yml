@@ -160,6 +160,7 @@ services:
         NEXT_PUBLIC_PRIMARY_COLOR: ${NEXT_PUBLIC_PRIMARY_COLOR:-#2563eb}
         NEXT_PUBLIC_LANDING_URL: ${NEXT_PUBLIC_LANDING_URL:-}
         NEXT_PUBLIC_SUPPORT_URL: ${NEXT_PUBLIC_SUPPORT_URL:-}
+        NEXT_PUBLIC_LLM_PROVIDER: ${ARCHLENS_LLM_PROVIDER:-local}
     restart: unless-stopped
     environment:
       NODE_ENV: production

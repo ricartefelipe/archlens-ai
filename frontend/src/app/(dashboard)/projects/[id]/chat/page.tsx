@@ -109,6 +109,10 @@ export default function ChatPage() {
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">
           Perguntas usam RAG sobre os artefatos do projeto (via análise selecionada).
+          {process.env.NEXT_PUBLIC_LLM_PROVIDER !== 'openai'
+            && process.env.NEXT_PUBLIC_LLM_PROVIDER !== 'ollama' && (
+            <> Modo piloto: respostas montadas a partir dos trechos indexados.</>
+          )}
         </p>
         {analysisId && (
           <p className="text-xs text-muted-foreground mt-1 font-mono truncate">
