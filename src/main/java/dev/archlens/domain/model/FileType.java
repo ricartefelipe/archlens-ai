@@ -20,6 +20,8 @@ public enum FileType {
     PIPELINE("CI/CD Pipeline"),
     TERRAFORM("Terraform"),
     PYTHON("Python Source"),
+    GO("Go Source"),
+    TYPESCRIPT("TypeScript/JavaScript"),
     SHELL("Shell Script"),
     OTHER("Other");
 

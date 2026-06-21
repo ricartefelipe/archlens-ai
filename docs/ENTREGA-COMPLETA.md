@@ -44,16 +44,17 @@
 | 21 | Analyzer Terraform | ✅ |
 | 22 | Analyzer Kubernetes | ✅ |
 | 23 | Analyzer .NET | ✅ |
-| 24 | Portal org (membros + convites) | ✅ |
-| 25 | API keys + OpenAPI | ✅ |
-| 26 | Webhooks análise | ✅ |
-| 27 | White-label (UI + PDF) | ✅ |
-| 28 | Runbook produção | ✅ |
-| 29 | E2E comparativo | ✅ |
-| 30 | RLS tabelas plataforma (008) | ✅ |
-| 31 | Página aceitar convite | ✅ |
-| 32 | Bootstrap ORG_ADMIN | ✅ |
-| 33 | E2E settings/admin/convite | ✅ |
+| 24 | Analyzer Python / Go / TypeScript | ✅ |
+| 25 | Portal org (membros + convites) | ✅ |
+| 26 | API keys + OpenAPI | ✅ |
+| 27 | Webhooks análise | ✅ |
+| 28 | White-label (UI + PDF) | ✅ |
+| 29 | Runbook produção | ✅ |
+| 30 | E2E comparativo | ✅ |
+| 31 | RLS tabelas plataforma (008) | ✅ |
+| 32 | Página aceitar convite | ✅ |
+| 33 | Bootstrap ORG_ADMIN | ✅ |
+| 34 | E2E settings/admin/convite | ✅ |
 
 ## Fase 3b / Fase 5 — Fora do escopo atual
 

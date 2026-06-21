@@ -42,6 +42,9 @@
 - [x] Analyzer Terraform (`.tf`, `.tfvars`)
 - [x] Analyzer Kubernetes (manifests YAML)
 - [x] Analyzer .NET (`.cs`)
+- [x] Analyzer Python (`.py`)
+- [x] Analyzer Go (`.go`)
+- [x] Analyzer TypeScript/React (`.ts`, `.tsx`)
 - [x] Comparativo before/after entre análises
 - [x] Export comparativo (Markdown/JSON/PDF)
 - [x] Runbook produção (`docs/RUNBOOK-PRODUCAO.md`)

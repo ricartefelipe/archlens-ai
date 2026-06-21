@@ -2,12 +2,15 @@ from app.analysis.analyzers import (
     AnalyzerFactory,
     DockerAnalyzer,
     DotNetAnalyzer,
+    GoAnalyzer,
     JavaAnalyzer,
     KubernetesAnalyzer,
     MigrationAnalyzer,
     OpenApiAnalyzer,
     PipelineAnalyzer,
+    PythonAnalyzer,
     TerraformAnalyzer,
+    TypeScriptAnalyzer,
 )
 from app.analysis.rules import RiskCategory, RiskSeverity
 
@@ -160,6 +163,9 @@ def test_analyzer_factory_dispatch():
     assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("infra/main.tf"))
     assert any(isinstance(a, TerraformAnalyzer) for a in AnalyzerFactory.get_analyzers("env/prod.tfvars"))
     assert any(isinstance(a, KubernetesAnalyzer) for a in AnalyzerFactory.get_analyzers("k8s/deployment.yaml"))
+    assert any(isinstance(a, PythonAnalyzer) for a in AnalyzerFactory.get_analyzers("app/main.py"))
+    assert any(isinstance(a, GoAnalyzer) for a in AnalyzerFactory.get_analyzers("cmd/server/main.go"))
+    assert any(isinstance(a, TypeScriptAnalyzer) for a in AnalyzerFactory.get_analyzers("src/App.tsx"))
     assert AnalyzerFactory.get_analyzers("README.md") == []
 
 
@@ -306,3 +312,61 @@ resource "aws_instance" "app" {
     security_findings = [f for f in findings if f.category == RiskCategory.SECURITY_RISK]
 
     assert security_findings == []
+
+
+def test_python_analyzer_flags_eval_and_secrets():
+    content = """
+API_KEY = "sk-live-1234567890"
+
+def run(user_input):
+    eval(user_input)
+    cursor.execute(f"SELECT * FROM users WHERE id = {user_id}")
+"""
+    findings = PythonAnalyzer().analyze("app/service.py", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_python_analyzer_clean_module():
+    content = """
+import os
+
+def get_key() -> str:
+    return os.environ["API_KEY"]
+"""
+    assert PythonAnalyzer().analyze("app/config.py", content) == []
+
+
+def test_go_analyzer_flags_secrets_and_sql():
+    content = """
+package main
+
+const apiKey = "super-secret-token"
+
+func query(db *sql.DB, id string) {
+    db.Query(fmt.Sprintf("SELECT * FROM users WHERE id = %s", id))
+    http.ListenAndServe(":8080", nil)
+}
+"""
+    findings = GoAnalyzer().analyze("cmd/main.go", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_typescript_analyzer_flags_xss_and_secrets():
+    content = """
+const apiKey = "sk-frontend-leaked-key-123456";
+
+export function Widget({ html }: { html: string }) {
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+"""
+    findings = TypeScriptAnalyzer().analyze("src/Widget.tsx", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)

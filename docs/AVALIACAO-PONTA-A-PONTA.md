@@ -130,7 +130,7 @@ O ArchLens AI possui **base técnica sólida** (hexagonal, Quarkus, worker Pytho
 | Produto comercial consultoria | ~75% |
 | Plataforma (org, webhooks, white-label) | ~70% |
 
-**Entregue desde a avaliação inicial:** PDF branded, OIDC PKCE, RLS, E2E, Docker, quotas/planos, comparativo before/after, export comparativo, analyzers TF/K8s/.NET, portal org, API keys, webhooks, UI admin, runbook produção.
+**Entregue desde a avaliação inicial:** PDF branded, OIDC PKCE, RLS, E2E, Docker, quotas/planos, comparativo before/after, export comparativo, analyzers (Java, SQL, Docker, OpenAPI, pipeline, Terraform, K8s, .NET, Python, Go, TypeScript), portal org, API keys, webhooks, UI admin, runbook produção.
 
 **Adiado (estratégia consultoria):** Stripe, landing integrada, dashboard custo IA.
 
@@ -152,6 +152,6 @@ A ferramenta **acelera** a entrega; o cliente paga pela **leitura sênior** e pe
 
 ## 8. Conclusão
 
-O ArchLens AI cobre o **ciclo completo de consultoria empacotada**: ingestão, análise multi-stack (Java, SQL, Docker, OpenAPI, pipeline, Terraform, K8s, .NET), RAG/chat, relatório PDF branded, comparativo before/after com export, quotas comerciais, portal org, API pública e webhooks.
+O ArchLens AI cobre o **ciclo completo de consultoria empacotada**: ingestão, análise multi-stack (Java, SQL, Docker, OpenAPI, pipeline, Terraform, K8s, .NET, Python, Go, TypeScript), RAG/chat, relatório PDF branded, comparativo before/after com export, quotas comerciais, portal org, API pública e webhooks.
 
 **Próximo passo comercial:** piloto pago com cliente real usando runbook consultor + case anonimizado. Evoluções opcionais: Stripe (piloto self-service), landing integrada, dashboard de custo IA.

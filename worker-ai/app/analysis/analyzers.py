@@ -603,6 +603,262 @@ class KubernetesAnalyzer(BaseAnalyzer):
         return match.group(1).lower() if match else ""
 
 
+class PythonAnalyzer(BaseAnalyzer):
+    _EVAL_EXEC = re.compile(r"\b(?:eval|exec)\s*\(", re.MULTILINE)
+    _PICKLE_LOADS = re.compile(r"\bpickle\.(?:loads|load)\s*\(", re.MULTILINE)
+    _HARDCODED_SECRET = re.compile(
+        r"(?i)(?:password|secret|api_key|access_token|private_key)\s*=\s*['\"](?!\$\{)([^'\"]{4,})['\"]",
+        re.MULTILINE,
+    )
+    _SQL_FORMAT = re.compile(
+        r"(?i)(?:execute|cursor\.execute|raw\s*\()\s*\(\s*f['\"]|(?:execute|cursor\.execute)\s*\(\s*['\"][^'\"]*%s",
+        re.MULTILINE,
+    )
+    _BARE_EXCEPT = re.compile(r"^\s*except\s*:\s*$", re.MULTILINE)
+    _ROUTE_DECORATOR = re.compile(
+        r"^\s*@(?:app\.(?:get|post|put|delete|patch)|router\.(?:get|post|put|delete|patch)|"
+        r"(?:api_view|action)\s*\()",
+        re.MULTILINE | re.IGNORECASE,
+    )
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+
+        if self._EVAL_EXEC.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Uso de eval/exec",
+                description="eval/exec executam código arbitrário e são vetores clássicos de RCE.",
+                file_path=file_path,
+                evidence="eval() ou exec() detectado",
+                suggestion="Substituir por parsing seguro (ast.literal_eval, json.loads, pydantic)",
+            ))
+
+        if self._PICKLE_LOADS.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="Deserialização pickle",
+                description="pickle.load(s) em dados não confiáveis permite execução remota de código.",
+                file_path=file_path,
+                evidence="pickle.load(s) detectado",
+                suggestion="Usar JSON, msgpack ou formatos seguros para serialização",
+            ))
+
+        for match in self._HARDCODED_SECRET.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Segredo hardcoded em Python",
+                description="Credenciais em plain text no código expõem ambientes e impedem rotação.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar os.environ, python-dotenv, Vault ou secrets do orchestrator",
+            ))
+
+        if self._SQL_FORMAT.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="SQL construído por concatenação",
+                description="Queries montadas com f-string ou %s aumentam risco de SQL injection.",
+                file_path=file_path,
+                evidence="execute com f-string ou %s detectado",
+                suggestion="Usar parâmetros bind (:name, %s com tupla) ou ORM query builder",
+            ))
+
+        bare_excepts = self._BARE_EXCEPT.findall(content)
+        if bare_excepts:
+            findings.append(RiskFinding(
+                category=RiskCategory.CONTRACT_VIOLATION,
+                severity=RiskSeverity.MEDIUM,
+                title="except bare (sem tipo)",
+                description=f"{len(bare_excepts)} bloco(s) except: capturam KeyboardInterrupt e SystemExit.",
+                file_path=file_path,
+                evidence="except: sem exceção específica",
+                suggestion="Capturar exceções específicas (ValueError, HTTPException, etc.)",
+            ))
+
+        routes = self._ROUTE_DECORATOR.findall(content)
+        if len(routes) > 8:
+            findings.append(RiskFinding(
+                category=RiskCategory.EXCESSIVE_COUPLING,
+                severity=RiskSeverity.MEDIUM,
+                title="Módulo com muitos endpoints HTTP",
+                description=f"Arquivo define {len(routes)} rotas. Módulos grandes dificultam manutenção e testes.",
+                file_path=file_path,
+                evidence=f"{len(routes)} decorators de rota",
+                suggestion="Dividir routers por domínio (users, orders, billing) em arquivos separados",
+            ))
+
+        return findings
+
+
+class GoAnalyzer(BaseAnalyzer):
+    _HARDCODED_SECRET = re.compile(
+        r'(?i)(?:password|secret|apiKey|api_key|token|privateKey)\s*[:=]\s*"(?!\\$)([^"]{4,})"',
+        re.MULTILINE,
+    )
+    _SQL_SPRINTF = re.compile(
+        r'(?i)(?:Query|Exec|QueryRow|Prepare)\s*\(\s*fmt\.Sprintf\s*\(',
+        re.MULTILINE,
+    )
+    _INSECURE_SERVE = re.compile(
+        r"\bhttp\.ListenAndServe\s*\(", re.MULTILINE
+    )
+    _PERMISSIVE_FILE_MODE = re.compile(
+        r"os\.(?:WriteFile|Chmod|OpenFile)\s*\([^)]*,\s*0?777\b", re.MULTILINE
+    )
+    _IGNORED_ERROR = re.compile(
+        r"^\s*_\s*=\s*\w+\(", re.MULTILINE
+    )
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+
+        for match in self._HARDCODED_SECRET.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Segredo hardcoded em Go",
+                description="Credenciais em plain text no código expõem serviços e dificultam rotação.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar os.Getenv, Vault, AWS Secrets Manager ou sealed secrets",
+            ))
+
+        if self._SQL_SPRINTF.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="SQL montado com fmt.Sprintf",
+                description="Queries dinâmicas via Sprintf aumentam risco de SQL injection.",
+                file_path=file_path,
+                evidence="db.Query/Exec com fmt.Sprintf",
+                suggestion="Usar placeholders ($1, ?) com parâmetros bind",
+            ))
+
+        if self._INSECURE_SERVE.search(content) and "ListenAndServeTLS" not in content:
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.MEDIUM,
+                title="HTTP server sem TLS",
+                description="http.ListenAndServe expõe tráfego em plain text.",
+                file_path=file_path,
+                evidence="http.ListenAndServe(",
+                suggestion="Terminar TLS no reverse proxy ou usar http.ListenAndServeTLS",
+            ))
+
+        if self._PERMISSIVE_FILE_MODE.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.MEDIUM,
+                title="Permissão de arquivo excessivamente aberta",
+                description="Modo 0777 permite leitura/escrita por qualquer usuário no host.",
+                file_path=file_path,
+                evidence="os.WriteFile/Chmod com 0777",
+                suggestion="Usar 0600 ou 0640 conforme princípio do menor privilégio",
+            ))
+
+        ignored = self._IGNORED_ERROR.findall(content)
+        if len(ignored) >= 3:
+            findings.append(RiskFinding(
+                category=RiskCategory.CONTRACT_VIOLATION,
+                severity=RiskSeverity.LOW,
+                title="Erros ignorados explicitamente",
+                description=f"{len(ignored)} atribuições `_ = fn()` ignoram falhas silenciosamente.",
+                file_path=file_path,
+                evidence=f"{len(ignored)} erros descartados com `_`",
+                suggestion="Tratar ou propagar erros; logar falhas não recuperáveis",
+            ))
+
+        return findings
+
+
+class TypeScriptAnalyzer(BaseAnalyzer):
+    _DANGEROUS_HTML = re.compile(
+        r"dangerouslySetInnerHTML\s*=\s*\{\s*\{", re.MULTILINE
+    )
+    _EVAL = re.compile(r"\beval\s*\(", re.MULTILINE)
+    _HARDCODED_SECRET = re.compile(
+        r"(?i)(?:apiKey|api_key|secret|password|accessToken|token)\s*[:=]\s*['\"](?!\$\{)([^'\"]{6,})['\"]",
+        re.MULTILINE,
+    )
+    _FETCH_NO_CATCH = re.compile(
+        r"fetch\s*\([^)]+\)\s*\.then\s*\(", re.MULTILINE
+    )
+
+    _LARGE_COMPONENT_LINES = 350
+    _HOOK_THRESHOLD = 12
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+        lower = file_path.lower()
+
+        if self._DANGEROUS_HTML.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.HIGH,
+                title="dangerouslySetInnerHTML",
+                description="Injeção de HTML não sanitizado abre vetor XSS no frontend.",
+                file_path=file_path,
+                evidence="dangerouslySetInnerHTML={{",
+                suggestion="Sanitizar com DOMPurify ou renderizar texto escapado",
+            ))
+
+        if self._EVAL.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Uso de eval()",
+                description="eval executa strings como código JavaScript arbitrário.",
+                file_path=file_path,
+                evidence="eval() detectado",
+                suggestion="Remover eval; usar JSON.parse ou parsers dedicados",
+            ))
+
+        for match in self._HARDCODED_SECRET.finditer(content):
+            if "process.env" in match.group(0):
+                continue
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Segredo hardcoded em TypeScript",
+                description="Tokens ou chaves no bundle frontend ficam expostos ao cliente.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar variáveis de ambiente server-side ou proxy de API",
+            ))
+
+        if lower.endswith((".tsx", ".jsx")):
+            lines = content.splitlines()
+            hook_count = len(re.findall(r"\buse[A-Z]\w*\s*\(", content))
+            if len(lines) >= self._LARGE_COMPONENT_LINES and hook_count >= self._HOOK_THRESHOLD:
+                findings.append(RiskFinding(
+                    category=RiskCategory.EXCESSIVE_COUPLING,
+                    severity=RiskSeverity.MEDIUM,
+                    title="Componente React muito grande",
+                    description=f"Componente com {len(lines)} linhas e {hook_count} hooks dificulta manutenção.",
+                    file_path=file_path,
+                    evidence=f"{len(lines)} linhas, {hook_count} hooks",
+                    suggestion="Extrair subcomponentes e custom hooks por responsabilidade",
+                ))
+
+        if self._FETCH_NO_CATCH.search(content) and ".catch(" not in content:
+            findings.append(RiskFinding(
+                category=RiskCategory.LACK_OF_OBSERVABILITY,
+                severity=RiskSeverity.LOW,
+                title="fetch sem tratamento de erro",
+                description="Promise chain com .then() sem .catch() pode falhar silenciosamente.",
+                file_path=file_path,
+                evidence="fetch(...).then(...) sem catch",
+                suggestion="Usar try/catch com async/await ou adicionar .catch()",
+            ))
+
+        return findings
+
+
 class DotNetAnalyzer(BaseAnalyzer):
     _CONNECTION_STRING = re.compile(
         r'ConnectionString\s*=\s*"(?!["\s]*\$)([^"]{8,})"',
@@ -665,6 +921,11 @@ class AnalyzerFactory:
         ".sql": [MigrationAnalyzer],
         ".tf": [TerraformAnalyzer],
         ".tfvars": [TerraformAnalyzer],
+        ".py": [PythonAnalyzer],
+        ".go": [GoAnalyzer],
+        ".ts": [TypeScriptAnalyzer],
+        ".tsx": [TypeScriptAnalyzer],
+        ".jsx": [TypeScriptAnalyzer],
     }
 
     @staticmethod
