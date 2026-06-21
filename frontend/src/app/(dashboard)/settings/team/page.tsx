@@ -23,6 +23,7 @@ export default function TeamSettingsPage() {
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgMemberRole>('ORG_MEMBER');
   const [inviting, setInviting] = useState(false);
+  const [inviteLink, setInviteLink] = useState('');
 
   const loadData = useCallback(async () => {
     setError('');
@@ -58,7 +59,9 @@ export default function TeamSettingsPage() {
     setInviting(true);
     setError('');
     try {
-      await createOrgInvite(getTenantId(), email.trim(), role);
+      const created = await createOrgInvite(getTenantId(), email.trim(), role);
+      const link = `${window.location.origin}/invite?token=${encodeURIComponent(created.token)}`;
+      setInviteLink(link);
       setEmail('');
       setRole('ORG_MEMBER');
       await loadData();
@@ -96,6 +99,15 @@ export default function TeamSettingsPage() {
         <p className="mb-4 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg px-4 py-3">
           {error}
         </p>
+      )}
+
+      {inviteLink && (
+        <div className="mb-8 bg-green-500/10 border border-green-500/30 rounded-xl p-4 space-y-2">
+          <p className="text-sm font-medium text-foreground">Convite criado — compartilhe o link:</p>
+          <code className="block text-xs break-all text-muted-foreground bg-background border border-border rounded-lg p-3">
+            {inviteLink}
+          </code>
+        </div>
       )}
 
       {canWrite && (
