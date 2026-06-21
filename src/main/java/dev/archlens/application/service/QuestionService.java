@@ -1,6 +1,7 @@
 package dev.archlens.application.service;
 
 import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
@@ -18,7 +19,9 @@ import dev.archlens.application.port.out.RagContextPort;
 import dev.archlens.application.port.out.TenantProvider;
 import dev.archlens.domain.exception.AnalysisNotFoundException;
 import dev.archlens.domain.model.Analysis;
+import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.Question;
+import dev.archlens.domain.model.RiskSeverity;
 import dev.archlens.infrastructure.persistence.rls.TenantScopedRls;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.transaction.Transactional;
@@ -107,12 +110,42 @@ public class QuestionService implements AskQuestionUseCase, ListQuestionsForAnal
         sb.append(analysis.getSummary() != null ? analysis.getSummary() : "Sem resumo disponível");
         sb.append("\n\n");
 
+        if (analysis.getRisks() != null && !analysis.getRisks().isEmpty()) {
+            sb.append("=== Riscos Identificados ===\n");
+            analysis.getRisks().stream()
+                    .sorted(Comparator.comparingInt(r -> severityRank(r.getSeverity())))
+                    .forEach(risk -> appendRiskLine(sb, risk));
+            sb.append('\n');
+        }
+
         if (!ragContext.assembledContext().isEmpty()) {
             sb.append("=== Trechos Relevantes do Código-Fonte ===\n");
             sb.append(ragContext.assembledContext());
         }
 
         return sb.toString();
+    }
+
+    private static void appendRiskLine(StringBuilder sb, ArchitecturalRisk risk) {
+        sb.append('[').append(risk.getSeverity()).append("] ")
+                .append(risk.getTitle()).append(" | ")
+                .append(risk.getFilePath() != null ? risk.getFilePath() : "-").append(" | ")
+                .append(risk.getCategory()).append('\n');
+        if (risk.getDescription() != null && !risk.getDescription().isBlank()) {
+            sb.append("  ").append(risk.getDescription().replace('\n', ' ')).append('\n');
+        }
+        if (risk.getSuggestion() != null && !risk.getSuggestion().isBlank()) {
+            sb.append("  Sugestão: ").append(risk.getSuggestion().replace('\n', ' ')).append('\n');
+        }
+    }
+
+    private static int severityRank(RiskSeverity severity) {
+        return switch (severity) {
+            case CRITICAL -> 0;
+            case HIGH -> 1;
+            case MEDIUM -> 2;
+            case LOW -> 3;
+        };
     }
 
     private String serializeSources(List<RagContextPort.SourceReference> sources) {
