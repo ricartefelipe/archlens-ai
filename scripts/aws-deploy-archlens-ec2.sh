@@ -51,6 +51,7 @@ if [[ ! -f "$ENV_FILE" ]]; then
   POSTGRES_PASSWORD="$(openssl rand -hex 16)"
   RABBITMQ_PASSWORD="$(openssl rand -hex 16)"
   KEYCLOAK_ADMIN_PASSWORD="$(openssl rand -hex 12)"
+  KEYCLOAK_BFF_CLIENT_SECRET="$(openssl rand -hex 24)"
   cat > "$ENV_FILE" <<EOF
 DOMAIN=${ARCHLENS_DOMAIN}
 APP_URL=${BASE_URL}
@@ -61,6 +62,7 @@ RABBITMQ_USERNAME=archlens
 RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
 KEYCLOAK_ADMIN=admin
 KEYCLOAK_ADMIN_PASSWORD=${KEYCLOAK_ADMIN_PASSWORD}
+KEYCLOAK_BFF_CLIENT_SECRET=${KEYCLOAK_BFF_CLIENT_SECRET}
 EMBEDDING_PROVIDER=local
 ARCHLENS_LLM_PROVIDER=local
 OPENAI_API_KEY=
@@ -70,9 +72,17 @@ NEXT_PUBLIC_PRIMARY_COLOR=#2563eb
 NEXT_PUBLIC_SUPPORT_URL=mailto:consultoria@exemplo.com
 EOF
   chmod 600 "$ENV_FILE"
+else
+  if ! grep -q '^KEYCLOAK_BFF_CLIENT_SECRET=' "$ENV_FILE"; then
+    KEYCLOAK_BFF_CLIENT_SECRET="$(openssl rand -hex 24)"
+    echo "KEYCLOAK_BFF_CLIENT_SECRET=${KEYCLOAK_BFF_CLIENT_SECRET}" >> "$ENV_FILE"
+  fi
+  KEYCLOAK_BFF_CLIENT_SECRET="$(grep '^KEYCLOAK_BFF_CLIENT_SECRET=' "$ENV_FILE" | cut -d= -f2-)"
+  export KEYCLOAK_BFF_CLIENT_SECRET
 fi
 
 echo "▸ Gerando realm Keycloak para $BASE_URL"
+export KEYCLOAK_BFF_CLIENT_SECRET="${KEYCLOAK_BFF_CLIENT_SECRET:-$(grep '^KEYCLOAK_BFF_CLIENT_SECRET=' "$ENV_FILE" | cut -d= -f2-)}"
 "$ROOT/scripts/generate-keycloak-realm-prod.sh" "$BASE_URL"
 
 echo "▸ Sincronizando código na EC2..."

@@ -29,6 +29,9 @@ quarkus:
     auth:
       proactive: false
       permission:
+        auth-public:
+          paths: /v1/auth/login
+          policy: permit
         health:
           paths: /q/*
           policy: permit
@@ -150,6 +153,10 @@ archlens:
     base-path: ${ARCHLENS_STORAGE_BASE_PATH:/tmp/archlens/projects}
   ingest:
     async: ${ARCHLENS_INGEST_ASYNC:true}
+  auth:
+    keycloak-token-url: ${KEYCLOAK_TOKEN_URL:http://localhost:8180/realms/archlens/protocol/openid-connect/token}
+    client-id: ${KEYCLOAK_LOGIN_CLIENT_ID:archlens-bff}
+    client-secret: ${KEYCLOAK_LOGIN_CLIENT_SECRET:archlens-bff-dev-secret}
   analysis:
     llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:true}
   rls:

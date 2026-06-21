@@ -47,40 +47,38 @@ export function logout(): void {
   clearSessionCookie();
 }
 
-export function keycloakEnabled(): boolean {
-  return !!process.env.NEXT_PUBLIC_KEYCLOAK_URL;
+/** Produção/piloto: login via API BFF (Keycloak transparente ao usuário). */
+export function isProductionAuth(): boolean {
+  return process.env.NEXT_PUBLIC_AUTH_MODE === 'bff'
+    || (process.env.NEXT_PUBLIC_OIDC_ENABLED !== 'true' && !!process.env.NEXT_PUBLIC_API_URL);
 }
 
-export async function loginWithKeycloak(username: string, password: string): Promise<void> {
-  const baseUrl = process.env.NEXT_PUBLIC_KEYCLOAK_URL;
-  const realm = process.env.NEXT_PUBLIC_KEYCLOAK_REALM || 'archlens';
-  const clientId = process.env.NEXT_PUBLIC_KEYCLOAK_CLIENT || 'archlens-frontend';
+export async function loginWithPassword(email: string, password: string): Promise<void> {
+  const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-  if (!baseUrl) {
-    throw new Error('Keycloak não configurado');
-  }
-
-  const body = new URLSearchParams({
-    grant_type: 'password',
-    client_id: clientId,
-    username,
-    password,
-  });
-
-  const res = await fetch(`${baseUrl}/realms/${realm}/protocol/openid-connect/token`, {
+  const res = await fetch(`${apiBase}/v1/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: email.trim(), password }),
   });
 
   if (!res.ok) {
-    throw new Error('Falha na autenticação');
+    let message = 'E-mail ou senha inválidos';
+    try {
+      const body = (await res.json()) as { message?: string };
+      if (body.message) {
+        message = body.message;
+      }
+    } catch {
+      // mantém mensagem padrão
+    }
+    throw new Error(message);
   }
 
-  const data = (await res.json()) as { access_token: string };
-  const payload = JSON.parse(atob(data.access_token.split('.')[1] ?? '')) as {
-    tenant_id?: string;
+  const data = (await res.json()) as {
+    accessToken: string;
+    tenantId: string;
   };
 
-  login(payload.tenant_id || 'default', data.access_token);
+  login(data.tenantId, data.accessToken);
 }

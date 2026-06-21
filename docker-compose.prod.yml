@@ -123,6 +123,9 @@ services:
       OIDC_AUTH_SERVER_URL: http://keycloak:8080/auth/realms/archlens
       QUARKUS_OIDC_TOKEN_ISSUER: ${KEYCLOAK_ISSUER_URL:?defina KEYCLOAK_ISSUER_URL}
       QUARKUS_OIDC_JWKS_PATH: /protocol/openid-connect/certs
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/auth/realms/archlens/protocol/openid-connect/token
+      KEYCLOAK_LOGIN_CLIENT_ID: archlens-bff
+      KEYCLOAK_LOGIN_CLIENT_SECRET: ${KEYCLOAK_BFF_CLIENT_SECRET:?defina KEYCLOAK_BFF_CLIENT_SECRET}
       CORS_ORIGINS: ${APP_URL:?defina APP_URL}
     volumes:
       - projectdata:/data/projects
@@ -151,7 +154,7 @@ services:
         NEXT_PUBLIC_KEYCLOAK_URL: ${KEYCLOAK_PUBLIC_URL}
         NEXT_PUBLIC_KEYCLOAK_REALM: archlens
         NEXT_PUBLIC_KEYCLOAK_CLIENT: archlens-frontend
-        NEXT_PUBLIC_OIDC_ENABLED: "true"
+        NEXT_PUBLIC_OIDC_ENABLED: "false"
         NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-ArchLens AI}
         NEXT_PUBLIC_APP_LOGO_URL: ${NEXT_PUBLIC_APP_LOGO_URL:-}
         NEXT_PUBLIC_PRIMARY_COLOR: ${NEXT_PUBLIC_PRIMARY_COLOR:-#2563eb}

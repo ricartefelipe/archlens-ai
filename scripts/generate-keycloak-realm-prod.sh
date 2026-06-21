@@ -19,11 +19,15 @@ if [[ -z "$APP_URL" ]]; then
 fi
 
 APP_URL="${APP_URL%/}"
+BFF_SECRET="${KEYCLOAK_BFF_CLIENT_SECRET:-$(openssl rand -hex 24)}"
 
 if [[ ! -f "$TEMPLATE" ]]; then
   echo "Template não encontrado: $TEMPLATE" >&2
   exit 1
 fi
 
-sed "s|\${APP_URL}|${APP_URL}|g" "$TEMPLATE" > "$OUTPUT"
+sed -e "s|\${APP_URL}|${APP_URL}|g" \
+    -e "s|\${KEYCLOAK_BFF_CLIENT_SECRET}|${BFF_SECRET}|g" \
+    "$TEMPLATE" > "$OUTPUT"
 echo "Realm gerado: $OUTPUT (APP_URL=$APP_URL)"
+echo "KEYCLOAK_BFF_CLIENT_SECRET=$BFF_SECRET"

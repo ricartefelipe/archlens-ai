@@ -104,6 +104,9 @@ services:
       ARCHLENS_ANALYSIS_LLM_FALLBACK: "false"
       ARCHLENS_RLS_ENABLED: "true"
       OIDC_AUTH_SERVER_URL: http://keycloak:8080/realms/archlens
+      KEYCLOAK_TOKEN_URL: http://keycloak:8080/realms/archlens/protocol/openid-connect/token
+      KEYCLOAK_LOGIN_CLIENT_ID: archlens-bff
+      KEYCLOAK_LOGIN_CLIENT_SECRET: archlens-bff-dev-secret
       CORS_ORIGINS: http://localhost:3000
     ports:
       - "8080:8080"
@@ -124,7 +127,7 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://localhost:8080
         NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8180
-        NEXT_PUBLIC_OIDC_ENABLED: "true"
+        NEXT_PUBLIC_OIDC_ENABLED: "false"
     container_name: archlens-frontend
     ports:
       - "3000:3000"
