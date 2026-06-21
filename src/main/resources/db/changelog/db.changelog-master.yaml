@@ -13,3 +13,5 @@ databaseChangeLog:
       file: db/changelog/migrations/006-create-tenant-accounts.yaml
   - include:
       file: db/changelog/migrations/007-platform-org-api-webhooks.yaml
+  - include:
+      file: db/changelog/migrations/008-platform-tables-rls.yaml

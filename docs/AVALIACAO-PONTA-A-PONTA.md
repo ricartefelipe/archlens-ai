@@ -52,7 +52,7 @@ O ArchLens AI possui **base técnica sólida** (hexagonal, Quarkus, worker Pytho
 |-----|---------|--------|
 | Reads sem validação de tenant (UUID enumeration) | Vazamento de dados | **Corrigido** — `findByIdAndTenantId` |
 | Frontend sem JWT / login fake | Spoof de tenant | **Parcial** — middleware + Keycloak opcional |
-| Sem RLS Postgres | Isolamento DB fraco | **Pendente** — evolução produção |
+| Sem RLS Postgres | Isolamento DB fraco | **Corrigido** — migrations 005 + 008 (tabelas de plataforma) |
 
 ### 3.3 Comercial (consultoria)
 
@@ -61,8 +61,8 @@ O ArchLens AI possui **base técnica sólida** (hexagonal, Quarkus, worker Pytho
 | Sem export de relatório | Não há entregável ao cliente | **Corrigido** — Markdown + JSON |
 | Sem template de entrega | Processo não repetível | **Corrigido** — `docs/TEMPLATE-RELATORIO-DIAGNOSTICO.md` |
 | Sem README comercial | Difícil vender serviço | **Corrigido** — `docs/README-COMERCIAL.md` |
-| Sem billing/quotas | Não monetiza self-service | **Pendente** — ver roadmap |
-| Sem PDF branded | Entrega executiva incompleta | **Pendente** — Markdown cobre MVP |
+| Sem billing/quotas | Não monetiza self-service | **Corrigido** — quotas + planos (consultoria) |
+| Sem PDF branded | Entrega executiva incompleta | **Corrigido** — PDF + logo + export comparativo |
 
 ---
 

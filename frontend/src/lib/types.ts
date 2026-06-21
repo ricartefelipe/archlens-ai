@@ -116,12 +116,20 @@ export interface OrgMember {
 
 export interface OrgInvite {
   id: string;
-  tenantId: string;
+  tenantId?: string;
   email: string;
   role: OrgMemberRole;
   expiresAt: string;
-  acceptedAt: string | null;
-  createdAt: string;
+  acceptedAt?: string | null;
+  createdAt?: string;
+}
+
+export interface OrgInviteCreated {
+  id: string;
+  email: string;
+  role: OrgMemberRole;
+  token: string;
+  expiresAt: string;
 }
 
 export interface ApiKey {
