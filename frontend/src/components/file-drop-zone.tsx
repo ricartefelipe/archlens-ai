@@ -55,7 +55,7 @@ export function FileDropZone({ onFileSelected, accept = '.zip', loading = false 
       ) : (
         <div className="text-center">
           <p className="text-sm text-foreground">Drop your .zip file here or click to browse</p>
-          <p className="text-xs text-muted-foreground mt-1">Only .zip files are supported</p>
+          <p className="text-xs text-muted-foreground mt-1">ZIP até 200 MB — código-fonte, OpenAPI, SQL, Docker (sem node_modules)</p>
         </div>
       )}
       {loading && <p className="text-xs text-primary animate-pulse">Uploading...</p>}

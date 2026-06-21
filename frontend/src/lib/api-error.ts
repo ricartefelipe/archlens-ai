@@ -8,9 +8,19 @@ export function parseApiError(err: unknown): string {
     return err.message;
   }
 
+  const status = match[1];
   const payload = match[2]?.trim();
+
+  if (status === '413') {
+    return 'Arquivo muito grande. Envie um ZIP de até 200 MB (sem node_modules, dist ou .git).';
+  }
+
   if (!payload) {
-    return `Erro na API (${match[1]}).`;
+    return `Erro na API (${status}).`;
+  }
+
+  if (payload.includes('Request Entity Too Large')) {
+    return 'Arquivo muito grande. Envie um ZIP de até 200 MB (sem node_modules, dist ou .git).';
   }
 
   try {
@@ -22,5 +32,5 @@ export function parseApiError(err: unknown): string {
     return payload;
   }
 
-  return `Erro na API (${match[1]}).`;
+  return `Erro na API (${status}).`;
 }
