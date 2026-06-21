@@ -161,7 +161,7 @@ archlens:
     client-id: ${KEYCLOAK_LOGIN_CLIENT_ID:archlens-bff}
     client-secret: ${KEYCLOAK_LOGIN_CLIENT_SECRET:archlens-bff-dev-secret}
   analysis:
-    llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:true}
+    llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:false}
   rls:
     enabled: ${ARCHLENS_RLS_ENABLED:false}
   report:

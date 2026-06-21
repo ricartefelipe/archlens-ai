@@ -104,6 +104,12 @@ public class AnalysisConsumer {
             AnalysisGateway.AnalysisGatewayResult staticResult =
                     analysisGateway.analyzeProject(event.projectId(), event.tenantId());
 
+            if (isWorkerUnavailable(staticResult)) {
+                throw new IllegalStateException(
+                        "Análise estática indisponível: arquivos do projeto não encontrados pelo worker. "
+                                + "Verifique se o upload concluiu e se backend/worker compartilham o mesmo storage.");
+            }
+
             List<ArchitecturalRisk> risks = new ArrayList<>();
             for (AnalysisGateway.RiskFindingDto finding : staticResult.findings()) {
                 ArchitecturalRisk risk = new ArchitecturalRisk();
@@ -207,6 +213,17 @@ public class AnalysisConsumer {
         } catch (Exception e) {
             LOG.warnf(e, "ADR generation failed for analysis %s", analysis.getId());
         }
+    }
+
+    private static boolean isWorkerUnavailable(AnalysisGateway.AnalysisGatewayResult result) {
+        if (result == null) {
+            return true;
+        }
+        String summary = result.summary() != null ? result.summary().toLowerCase() : "";
+        return result.totalFilesAnalyzed() == 0
+                && (summary.contains("indisponível")
+                || summary.contains("não encontrado")
+                || summary.contains("nao encontrado"));
     }
 
     private RiskCategory safeCategory(String category) {

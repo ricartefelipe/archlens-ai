@@ -105,6 +105,9 @@ public class ReportExportService implements ExportAnalysisReportUseCase {
         md.append("| Gerado em | ").append(formatInstant(analysis.getUpdatedAt())).append(" |\n\n");
 
         md.append("## Sumário executivo\n\n");
+        md.append(ExecutiveSummaryBuilder.build(project, analysis, adrs)).append("\n\n");
+
+        md.append("## Resumo técnico da análise\n\n");
         md.append(analysis.getSummary() != null ? analysis.getSummary() : "_Sem resumo disponível._").append("\n\n");
 
         Map<RiskSeverity, Long> counts = analysis.getRisks().stream()

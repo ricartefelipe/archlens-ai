@@ -79,6 +79,9 @@ else
   fi
   KEYCLOAK_BFF_CLIENT_SECRET="$(grep '^KEYCLOAK_BFF_CLIENT_SECRET=' "$ENV_FILE" | cut -d= -f2-)"
   export KEYCLOAK_BFF_CLIENT_SECRET
+  if ! grep -q '^ARCHLENS_ENFORCE_QUOTAS=' "$ENV_FILE"; then
+    echo "ARCHLENS_ENFORCE_QUOTAS=false" >> "$ENV_FILE"
+  fi
 fi
 
 echo "▸ Gerando realm Keycloak para $BASE_URL"

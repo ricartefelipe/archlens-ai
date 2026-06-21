@@ -2,9 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, FolderOpen, Loader2 } from 'lucide-react';
+import { Plus, FolderOpen, Loader2, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { listProjects, createProject } from '@/lib/api';
+import { parseApiError } from '@/lib/api-error';
 import { getTenantId } from '@/lib/auth';
 import { StatusBadge } from '@/components/status-badge';
 import type { Project } from '@/lib/types';
@@ -15,6 +17,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -23,7 +26,7 @@ export default function ProjectsPage() {
       const data = await listProjects(getTenantId());
       setProjects(data);
     } catch (err) {
-      console.error('Failed to load projects:', err);
+      setErrorMessage(parseApiError(err));
     } finally {
       setLoading(false);
     }
@@ -40,6 +43,7 @@ export default function ProjectsPage() {
     e.preventDefault();
     if (!name.trim()) return;
     setCreating(true);
+    setErrorMessage(null);
     try {
       const project = await createProject(getTenantId(), name.trim(), description.trim());
       setProjects((prev) => [project, ...prev]);
@@ -47,7 +51,7 @@ export default function ProjectsPage() {
       setDescription('');
       setShowForm(false);
     } catch (err) {
-      console.error('Failed to create project:', err);
+      setErrorMessage(parseApiError(err));
     } finally {
       setCreating(false);
     }
@@ -57,37 +61,46 @@ export default function ProjectsPage() {
     <div className="p-8 max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Projects</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage your architectural analysis projects</p>
+          <h1 className="text-2xl font-bold text-foreground">Projetos</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Diagnósticos arquiteturais — upload, análise e relatório com evidências
+          </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
           className="flex items-center gap-2 px-4 py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 transition-colors"
         >
           <Plus className="w-4 h-4" />
-          New Project
+          Novo projeto
         </button>
       </div>
+
+      {errorMessage && (
+        <div className="mb-6 flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <p>{errorMessage}</p>
+        </div>
+      )}
 
       {showForm && (
         <form onSubmit={handleCreate} className="mb-8 bg-card rounded-xl border border-border p-6 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Nome</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="my-project"
+              placeholder="meu-sistema"
               required
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">Descrição</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description..."
+              placeholder="Opcional — contexto do sistema auditado"
               rows={2}
               className="w-full px-3 py-2 bg-background border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
@@ -99,14 +112,14 @@ export default function ProjectsPage() {
               className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 disabled:opacity-50 transition-colors"
             >
               {creating && <Loader2 className="w-4 h-4 animate-spin" />}
-              Create
+              Criar
             </button>
             <button
               type="button"
               onClick={() => setShowForm(false)}
               className="px-4 py-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Cancel
+              Cancelar
             </button>
           </div>
         </form>
@@ -119,8 +132,8 @@ export default function ProjectsPage() {
       ) : projects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <FolderOpen className="w-12 h-12 text-muted-foreground mb-4" />
-          <p className="text-lg text-foreground font-medium">No projects yet</p>
-          <p className="text-sm text-muted-foreground mt-1">Create your first project to get started</p>
+          <p className="text-lg text-foreground font-medium">Nenhum projeto ainda</p>
+          <p className="text-sm text-muted-foreground mt-1">Crie um projeto e envie um ZIP para começar</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -140,8 +153,8 @@ export default function ProjectsPage() {
                 <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{project.description}</p>
               )}
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{project.fileCount} files</span>
-                <span>{format(new Date(project.createdAt), 'MMM d, yyyy')}</span>
+                <span>{project.fileCount} arquivo(s)</span>
+                <span>{format(new Date(project.createdAt), 'd MMM yyyy', { locale: ptBR })}</span>
               </div>
             </button>
           ))}

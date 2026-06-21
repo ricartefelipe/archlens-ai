@@ -89,7 +89,7 @@ export default function AnalysisDetailPage() {
   }
 
   if (!analysis) {
-    return <div className="p-8 text-destructive">Analysis not found</div>;
+    return <div className="p-8 text-destructive">Análise não encontrada</div>;
   }
 
   const sortedRisks = [...analysis.risks].sort(
@@ -161,8 +161,8 @@ export default function AnalysisDetailPage() {
           )}
         </div>
         <div className="flex gap-4 text-xs text-muted-foreground">
-          <span>Created: {format(new Date(analysis.createdAt), 'MMM d, yyyy HH:mm')}</span>
-          <span>Updated: {format(new Date(analysis.updatedAt), 'MMM d, yyyy HH:mm')}</span>
+          <span>Criada: {format(new Date(analysis.createdAt), 'dd/MM/yyyy HH:mm')}</span>
+          <span>Atualizada: {format(new Date(analysis.updatedAt), 'dd/MM/yyyy HH:mm')}</span>
         </div>
         {analysis.summary && (
           <p className="mt-3 text-sm text-foreground bg-card rounded-xl border border-border p-4">
@@ -174,7 +174,26 @@ export default function AnalysisDetailPage() {
       {(analysis.status === 'PENDING' || analysis.status === 'PROCESSING') && (
         <div className="flex items-center gap-3 bg-primary/10 rounded-xl p-6">
           <Loader2 className="w-6 h-6 text-primary animate-spin" />
-          <p className="text-sm text-foreground">Analysis is being processed...</p>
+          <p className="text-sm text-foreground">Análise em processamento…</p>
+        </div>
+      )}
+
+      {analysis.status === 'FAILED' && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6">
+          <p className="text-sm font-medium text-red-700 dark:text-red-400">Análise falhou</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {analysis.summary || 'Verifique se o worker de IA está ativo e se há arquivos no projeto.'}
+          </p>
+        </div>
+      )}
+
+      {analysis.status === 'COMPLETED' && analysis.risks.length === 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-6">
+          <p className="text-sm font-medium text-amber-800 dark:text-amber-300">Nenhum risco identificado</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {analysis.summary ||
+              'Envie código-fonte (.java, .py, .ts, etc.) e execute nova análise. Arquivos binários ou vazios não geram achados.'}
+          </p>
         </div>
       )}
 
@@ -198,7 +217,7 @@ export default function AnalysisDetailPage() {
 
           <div>
             <h2 className="text-lg font-semibold text-foreground mb-4">
-              Risk Details ({sortedRisks.length})
+              Detalhes dos riscos ({sortedRisks.length})
             </h2>
             <div className="space-y-2">
               {sortedRisks.map((risk) => (
@@ -212,7 +231,7 @@ export default function AnalysisDetailPage() {
       {adrs.length > 0 && (
         <div>
           <h2 className="text-lg font-semibold text-foreground mb-4">
-            Architectural Decision Records ({adrs.length})
+            Registros de decisão arquitetural ({adrs.length})
           </h2>
           <div className="grid gap-4">
             {adrs.map((adr) => (
@@ -223,21 +242,21 @@ export default function AnalysisDetailPage() {
                 </div>
                 <div className="space-y-2 text-sm">
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Context</p>
+                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Contexto</p>
                     <p className="text-foreground">{adr.context}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Decision</p>
+                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Decisão</p>
                     <p className="text-foreground">{adr.decision}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Consequences</p>
+                    <p className="text-xs text-muted-foreground font-medium mb-0.5">Consequências</p>
                     <p className="text-foreground">{adr.consequences}</p>
                   </div>
                 </div>
                 {adr.relatedFindings?.length > 0 && (
                   <p className="text-xs text-muted-foreground">
-                    {adr.relatedFindings.length} related findings
+                    {adr.relatedFindings.length} achado(s) relacionado(s)
                   </p>
                 )}
               </div>

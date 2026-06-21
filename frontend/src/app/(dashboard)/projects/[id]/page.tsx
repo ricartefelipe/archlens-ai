@@ -208,13 +208,13 @@ export default function ProjectDetailPage() {
   }
 
   if (!project) {
-    return <div className="p-8 text-destructive">Project not found</div>;
+    return <div className="p-8 text-destructive">Projeto não encontrado</div>;
   }
 
   const tabs: { key: Tab; label: string; icon: typeof FileCode }[] = [
     { key: 'upload', label: 'Upload', icon: FileCode },
-    { key: 'files', label: `Files (${files.length})`, icon: FileCode },
-    { key: 'analyses', label: `Analyses (${analyses.length})`, icon: BarChart3 },
+    { key: 'files', label: `Arquivos (${files.length})`, icon: FileCode },
+    { key: 'analyses', label: `Análises (${analyses.length})`, icon: BarChart3 },
   ];
 
   return (
@@ -254,7 +254,7 @@ export default function ProjectDetailPage() {
             className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-medium hover:bg-primary/80 disabled:opacity-50 transition-colors"
           >
             {creatingAnalysis ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-            Run Analysis
+            Executar análise
           </button>
         </div>
       </div>
@@ -320,9 +320,9 @@ export default function ProjectDetailPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border">
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Path</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Type</th>
-                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Size</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Caminho</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">Tipo</th>
+                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">Tamanho</th>
               </tr>
             </thead>
             <tbody>
@@ -357,12 +357,14 @@ export default function ProjectDetailPage() {
                 className="flex items-center gap-2 px-4 py-2 bg-secondary text-foreground rounded-lg text-sm font-medium hover:bg-secondary/80 disabled:opacity-50 transition-colors"
               >
                 <GitCompare className="w-4 h-4" />
-                Comparar before/after
+                Comparar antes/depois
               </button>
             </div>
           )}
           {analyses.length === 0 ? (
-            <p className="text-sm text-muted-foreground py-8 text-center">No analyses yet. Click &quot;Run Analysis&quot; to start.</p>
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Nenhuma análise ainda. Clique em &quot;Executar análise&quot; para começar.
+            </p>
           ) : (
             analyses.map((a) => (
               <div
@@ -386,19 +388,19 @@ export default function ProjectDetailPage() {
                 <div className="flex items-center justify-between mb-2">
                   <StatusBadge status={a.status} />
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(a.createdAt), 'MMM d, yyyy HH:mm')}
+                    {format(new Date(a.createdAt), 'dd/MM/yyyy HH:mm')}
                   </span>
                 </div>
                 {a.summary && (
                   <p className="text-sm text-muted-foreground line-clamp-2">{a.summary}</p>
                 )}
                 {a.risks.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-2">{a.risks.length} risks identified</p>
+                  <p className="text-xs text-muted-foreground mt-2">{a.risks.length} risco(s) identificado(s)</p>
                 )}
                 {(a.status === 'PENDING' || a.status === 'PROCESSING') && (
                   <div className="flex items-center gap-2 mt-2 text-xs text-primary">
                     <Loader2 className="w-3 h-3 animate-spin" />
-                    Processing...
+                    Processando…
                   </div>
                 )}
                   </button>

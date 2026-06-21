@@ -91,7 +91,7 @@ export default function ChatPage() {
       setQuestions((prev) =>
         prev.map((item) =>
           item.id === tempQuestion.id
-            ? { ...item, answer: 'Failed to get answer. Please try again.' }
+            ? { ...item, answer: 'Não foi possível obter resposta. Tente novamente.' }
             : item
         )
       );
@@ -103,9 +103,9 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-full">
       <div className="border-b border-border px-6 py-4">
-        <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <h1 className="text-lg font-semibold text-foreground flex items-center gap-2">
           <MessageSquare className="w-5 h-5 text-primary" />
-          Architecture Chat
+          Chat arquitetural
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">
           Perguntas usam RAG sobre os artefatos do projeto (via análise selecionada).
@@ -183,7 +183,7 @@ export default function ChatPage() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Pergunte sobre a arquitetura..."
+            placeholder="Pergunte sobre riscos, API, Docker, migrations..."
             disabled={sending || !analysisId || loading}
             className="flex-1 px-4 py-2.5 bg-card border border-border rounded-xl text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
           />
