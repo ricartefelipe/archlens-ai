@@ -40,7 +40,7 @@ chmod +x scripts/*.sh
 ./scripts/aws-provision-archlens-ec2.sh
 ```
 
-Cria EC2 `t3.large`, 80 GB, Amazon Linux 2023. Metadata em `.aws-deploy/last-ec2.env`.
+Cria EC2 `t3.small` (free tier sa-east-1) ou `t3.large` (recomendado p/ produção), 80 GB, Amazon Linux 2023.
 
 ### 2. Validar DNS piloto (sslip.io)
 

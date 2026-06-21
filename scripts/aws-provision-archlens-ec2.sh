@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 AWS_REGION="${AWS_REGION:-sa-east-1}"
-INSTANCE_TYPE="${INSTANCE_TYPE:-t3.large}"
+INSTANCE_TYPE="${INSTANCE_TYPE:-t3.small}"
 KEY_NAME="${KEY_NAME:-archlens-deploy}"
 SG_NAME="${SG_NAME:-archlens-prod-sg}"
 INSTANCE_NAME="${INSTANCE_NAME:-archlens-prod}"
