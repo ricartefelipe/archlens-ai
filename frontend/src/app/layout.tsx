@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
+import { APP_NAME, PRIMARY_COLOR } from "@/lib/branding";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,9 +15,17 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ArchLens AI",
+  title: APP_NAME,
   description: "Multi-tenant Architectural Intelligence Platform",
 };
+
+const brandingStyle = PRIMARY_COLOR
+  ? ({
+      '--primary': PRIMARY_COLOR,
+      '--ring': PRIMARY_COLOR,
+      '--accent': PRIMARY_COLOR,
+    } as CSSProperties)
+  : undefined;
 
 export default function RootLayout({
   children,
@@ -24,8 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      style={brandingStyle}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>

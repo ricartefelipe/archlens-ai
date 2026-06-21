@@ -18,26 +18,33 @@
 - [x] Dockerfile backend + frontend no compose
 - [x] Roteiro de demo gravada (`docs/DEMO-SCRIPT.md`)
 
-## Fase 3 — Monetização (consultoria) ✅ parcial
+## Fase 3 — Monetização (consultoria) ✅
 
 - [x] Quotas por tenant (projetos, análises/mês, upload MB)
 - [x] Planos comerciais (PILOT → PORTFOLIO + INTERNO)
 - [x] API `/v1/account/usage` + admin upgrade de plano
 - [x] Painel de uso no frontend + link landing
 - [x] ADR modelo comercial (`docs/ADR-001-modelo-comercial.md`)
-- [ ] Stripe: pay-per-diagnóstico (Fase 3b)
-- [ ] Metering e dashboard de custo IA
+- [x] UI admin de tenants (`/admin/tenants`)
+
+## Fase 3b — Adiado (estratégia consultoria)
+
+- [ ] Stripe: pay-per-diagnóstico
 - [ ] Landing page integrada (archlens-landing)
+- [ ] Dashboard de custo IA
 
-## Fase 4 — Escala (90+ dias)
+## Fase 4 — Escala ✅
 
-- [ ] Portal de organizações (convites, RBAC)
+- [x] Portal org/RBAC (membros, convites, roles)
+- [x] API pública (API keys + OpenAPI)
+- [x] Webhooks (`analysis.completed` / `analysis.failed`)
+- [x] White-label (env vars UI + PDF)
 - [x] Analyzer Terraform (`.tf`, `.tfvars`)
 - [x] Analyzer Kubernetes (manifests YAML)
-- [ ] Analyzers: .NET
+- [x] Analyzer .NET (`.cs`)
 - [x] Comparativo before/after entre análises
-- [ ] API pública para integrações
-- [ ] White-label
+- [x] Export comparativo (Markdown/JSON/PDF)
+- [x] Runbook produção (`docs/RUNBOOK-PRODUCAO.md`)
 
 ## Fase 5 — SaaS (opcional, se mudar estratégia)
 

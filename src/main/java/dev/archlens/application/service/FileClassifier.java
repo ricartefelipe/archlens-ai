@@ -41,6 +41,7 @@ public class FileClassifier {
         }
 
         if (fileName.endsWith(".java")) return FileType.JAVA;
+        if (fileName.endsWith(".cs")) return FileType.DOTNET;
         if (fileName.endsWith(".kt") || fileName.endsWith(".kts")) return FileType.KOTLIN;
         if (fileName.endsWith(".py")) return FileType.PYTHON;
         if (fileName.endsWith(".sql")) return FileType.SQL;

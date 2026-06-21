@@ -1,5 +1,6 @@
 package dev.archlens.infrastructure.persistence.adapter;
 
+import java.util.List;
 import java.util.Optional;
 
 import dev.archlens.application.port.out.TenantAccountRepositoryPort;
@@ -47,5 +48,10 @@ public class TenantAccountRepositoryAdapter implements TenantAccountRepositoryPo
     @Override
     public Optional<TenantAccount> findByTenantId(String tenantId) {
         return repository.findByIdOptional(tenantId).map(mapper::toDomain);
+    }
+
+    @Override
+    public List<TenantAccount> findAll() {
+        return repository.listAll().stream().map(mapper::toDomain).toList();
     }
 }

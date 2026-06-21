@@ -216,5 +216,10 @@ class AnalysisServiceTest {
         public Optional<TenantAccount> findByTenantId(String tenantId) {
             return store.stream().filter(a -> tenantId.equals(a.getTenantId())).findFirst();
         }
+
+        @Override
+        public List<TenantAccount> findAll() {
+            return List.copyOf(store);
+        }
     }
 }

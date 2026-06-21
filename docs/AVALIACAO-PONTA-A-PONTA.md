@@ -120,29 +120,19 @@ O ArchLens AI possui **base técnica sólida** (hexagonal, Quarkus, worker Pytho
 
 ---
 
-## 6. Roadmap para produto rentável (próximas entregas)
+## 6. Estado atual (jun/2026 — pós Fases 3–4)
 
-### Prioridade alta (30 dias)
+| Dimensão | Maturidade |
+|----------|------------|
+| Arquitetura/código base | ~85% |
+| Integração E2E funcional | ~75% |
+| Segurança/multi-tenant | ~80% (RLS, OIDC roles, API keys) |
+| Produto comercial consultoria | ~75% |
+| Plataforma (org, webhooks, white-label) | ~70% |
 
-1. **PDF com branding** — conversão do Markdown (Puppeteer ou biblioteca Java)
-2. **OIDC E2E testado** — fluxo PKCE no frontend, remover login por tenant em prod
-3. **RLS Postgres** — políticas por `tenant_id`
-4. **Testes E2E** — Playwright: upload → READY → análise → export
-5. **Demo gravada** — vídeo 3 min para prospecção
+**Entregue desde a avaliação inicial:** PDF branded, OIDC PKCE, RLS, E2E, Docker, quotas/planos, comparativo before/after, export comparativo, analyzers TF/K8s/.NET, portal org, API keys, webhooks, UI admin, runbook produção.
 
-### Prioridade média (60–90 dias)
-
-6. **Billing** — Stripe: pay-per-diagnóstico ou pacotes
-7. **Quotas** — limite de uploads/análises/tokens por tenant
-8. **Portal org** — convites, roles, auditoria
-9. **Containerizar backend + frontend** no compose/K8s
-10. **Mais analyzers** — .NET, Terraform, K8s manifests
-
-### Prioridade baixa / SaaS (se mudar estratégia)
-
-11. Self-service onboarding
-12. Multi-região
-13. White-label completo
+**Adiado (estratégia consultoria):** Stripe, landing integrada, dashboard custo IA.
 
 ---
 
@@ -162,6 +152,6 @@ A ferramenta **acelera** a entrega; o cliente paga pela **leitura sênior** e pe
 
 ## 8. Conclusão
 
-O ArchLens AI deixou de ser apenas vitrine técnica e passou a **fechar o ciclo mínimo vendável** de consultoria: ingestão automática, análise com evidências, export de relatório e isolamento tenant básico. Para operação comercial plena, faltam PDF branded, OIDC end-to-end em produção, billing e testes E2E — mapeados no roadmap.
+O ArchLens AI cobre o **ciclo completo de consultoria empacotada**: ingestão, análise multi-stack (Java, SQL, Docker, OpenAPI, pipeline, Terraform, K8s, .NET), RAG/chat, relatório PDF branded, comparativo before/after com export, quotas comerciais, portal org, API pública e webhooks.
 
-**Próximo passo comercial:** usar o template de relatório em um piloto simbólico e gerar case anonimizado para prospecção.
+**Próximo passo comercial:** piloto pago com cliente real usando runbook consultor + case anonimizado. Evoluções opcionais: Stripe (piloto self-service), landing integrada, dashboard de custo IA.
