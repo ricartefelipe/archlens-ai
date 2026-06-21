@@ -48,6 +48,20 @@ class AuthServiceTest {
                 () -> authService.login(new LoginRequest("architect@archlens.dev", "secret")));
     }
 
+    @Test
+    void refreshReturnsNewSessionFromRefreshGrant() {
+        String token = jwtWithClaims("{\"tenant_id\":\"tenant-1\",\"email\":\"architect@archlens.dev\"}");
+        tokenGateway.setNextResponse(
+                new KeycloakTokenGateway.TokenResponse(token, "new-refresh", 3600, "Bearer"));
+
+        var response = authService.refresh("old-refresh");
+
+        assertEquals("tenant-1", response.tenantId());
+        assertEquals(token, response.accessToken());
+        assertEquals("new-refresh", response.refreshToken());
+        assertEquals("old-refresh", tokenGateway.lastRefreshToken());
+    }
+
     private static String jwtWithClaims(String jsonPayload) {
         String header = Base64.getUrlEncoder().withoutPadding()
                 .encodeToString("{\"alg\":\"none\"}".getBytes());
@@ -61,6 +75,7 @@ class AuthServiceTest {
         private KeycloakTokenGateway.TokenResponse nextResponse;
         private String lastEmail;
         private String lastPassword;
+        private String lastRefreshToken;
 
         void setNextResponse(KeycloakTokenGateway.TokenResponse nextResponse) {
             this.nextResponse = nextResponse;
@@ -74,10 +89,20 @@ class AuthServiceTest {
             return lastPassword;
         }
 
+        String lastRefreshToken() {
+            return lastRefreshToken;
+        }
+
         @Override
         public TokenResponse passwordGrant(String email, String password) {
             lastEmail = email;
             lastPassword = password;
+            return nextResponse;
+        }
+
+        @Override
+        public TokenResponse refreshGrant(String refreshToken) {
+            lastRefreshToken = refreshToken;
             return nextResponse;
         }
     }

@@ -2,6 +2,7 @@
   "realm": "archlens",
   "enabled": true,
   "sslRequired": "external",
+  "accessTokenLifespan": 3600,
   "registrationAllowed": false,
   "loginWithEmailAllowed": true,
   "duplicateEmailsAllowed": false,

@@ -16,13 +16,33 @@ import type {
   AdminTenant,
 } from './types';
 import { getApiBase, newCorrelationId } from './api-base';
-import { getAccessToken } from './auth';
+import { getAccessToken, redirectToLogin, refreshSession } from './auth';
 
 function correlationId(): string {
   return newCorrelationId();
 }
 
 async function apiFetch<T>(path: string, tenantId: string, options: RequestInit = {}): Promise<T> {
+  const res = await apiFetchResponse(path, tenantId, options);
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  }
+
+  if (res.status === 204) {
+    return undefined as T;
+  }
+
+  return res.json() as Promise<T>;
+}
+
+async function apiFetchResponse(
+  path: string,
+  tenantId: string,
+  options: RequestInit = {},
+  allowRefresh = true,
+): Promise<Response> {
   const headers: Record<string, string> = {
     'X-Tenant-Id': tenantId,
     'X-Correlation-Id': correlationId(),
@@ -40,16 +60,15 @@ async function apiFetch<T>(path: string, tenantId: string, options: RequestInit 
 
   const res = await fetch(`${getApiBase()}${path}`, { ...options, headers });
 
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`API ${res.status}: ${text || res.statusText}`);
+  if (res.status === 401 && allowRefresh && typeof window !== 'undefined') {
+    const refreshed = await refreshSession();
+    if (refreshed) {
+      return apiFetchResponse(path, tenantId, options, false);
+    }
+    redirectToLogin();
   }
 
-  if (res.status === 204) {
-    return undefined as T;
-  }
-
-  return res.json() as Promise<T>;
+  return res;
 }
 
 export async function listProjects(tenantId: string): Promise<Project[]> {

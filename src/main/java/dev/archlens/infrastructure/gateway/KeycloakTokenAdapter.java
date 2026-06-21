@@ -52,12 +52,27 @@ public class KeycloakTokenAdapter implements KeycloakTokenGateway {
         if (clientSecret != null && !clientSecret.isBlank()) {
             append(form, "client_secret", clientSecret);
         }
+        return requestToken(form.toString());
+    }
 
+    @Override
+    public TokenResponse refreshGrant(String refreshToken) {
+        StringBuilder form = new StringBuilder();
+        append(form, "grant_type", "refresh_token");
+        append(form, "client_id", clientId);
+        append(form, "refresh_token", refreshToken);
+        if (clientSecret != null && !clientSecret.isBlank()) {
+            append(form, "client_secret", clientSecret);
+        }
+        return requestToken(form.toString());
+    }
+
+    private TokenResponse requestToken(String formBody) {
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(tokenUrl))
                 .timeout(Duration.ofSeconds(15))
                 .header("Content-Type", "application/x-www-form-urlencoded")
-                .POST(HttpRequest.BodyPublishers.ofString(form.toString()))
+                .POST(HttpRequest.BodyPublishers.ofString(formBody))
                 .build();
 
         try {

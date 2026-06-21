@@ -110,10 +110,6 @@ export function UsagePanel() {
           <span>{formatLimit(usage.uploadMbUsed, usage.uploadMbLimit)} MB</span>
         </div>
       </div>
-
-      <div className="text-[10px] text-muted-foreground truncate" title={tenantId}>
-        Tenant: {tenantId}
-      </div>
     </div>
   );
 }

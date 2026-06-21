@@ -11,8 +11,8 @@ describe('auth', () => {
     expect(isAuthenticated()).toBe(false);
   });
 
-  it('persiste o tenant em login e o expõe em getTenantId', () => {
-    login('tenant-1');
+  it('persiste o tenant e o token em login e o expõe em getTenantId', () => {
+    login('tenant-1', 'access-token');
     expect(getTenantId()).toBe('tenant-1');
     expect(isAuthenticated()).toBe(true);
   });
@@ -23,7 +23,7 @@ describe('auth', () => {
   });
 
   it('logout remove o tenant e volta ao estado não autenticado', () => {
-    login('tenant-1');
+    login('tenant-1', 'access-token');
     logout();
     expect(isAuthenticated()).toBe(false);
     expect(getTenantId()).toBe('default');

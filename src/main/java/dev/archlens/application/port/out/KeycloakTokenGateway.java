@@ -4,6 +4,8 @@ public interface KeycloakTokenGateway {
 
     TokenResponse passwordGrant(String username, String password);
 
+    TokenResponse refreshGrant(String refreshToken);
+
     record TokenResponse(
             String accessToken,
             String refreshToken,

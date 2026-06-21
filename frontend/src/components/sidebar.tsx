@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import clsx from 'clsx';
 import { UsagePanel } from '@/components/usage-panel';
+import { UserSessionBar } from '@/components/user-session-bar';
 import { AppLogo } from '@/components/app-logo';
 import { APP_NAME, SUPPORT_URL } from '@/lib/branding';
 import { isPlatformAdmin } from '@/lib/roles';
@@ -131,6 +132,7 @@ export function Sidebar() {
       </nav>
 
       <UsagePanel />
+      <UserSessionBar />
     </aside>
   );
 }

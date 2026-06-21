@@ -2,6 +2,7 @@ package dev.archlens.interfaces.rest;
 
 import dev.archlens.application.service.AuthService;
 import dev.archlens.interfaces.rest.dto.request.LoginRequest;
+import dev.archlens.interfaces.rest.dto.request.RefreshRequest;
 import dev.archlens.interfaces.rest.dto.response.LoginResponse;
 import io.smallrye.mutiny.Uni;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
@@ -34,6 +35,15 @@ public class AuthResource {
     @PermitAll
     public Uni<Response> login(@Valid LoginRequest request) {
         return Uni.createFrom().item(() -> authService.login(request))
+                .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
+                .map(AuthResource::ok);
+    }
+
+    @POST
+    @Path("/refresh")
+    @PermitAll
+    public Uni<Response> refresh(@Valid RefreshRequest request) {
+        return Uni.createFrom().item(() -> authService.refresh(request.refreshToken()))
                 .runSubscriptionOn(Infrastructure.getDefaultWorkerPool())
                 .map(AuthResource::ok);
     }

@@ -29,6 +29,15 @@ public class AuthService {
                 request.email().trim(),
                 request.password());
 
+        return toLoginResponse(token);
+    }
+
+    public LoginResponse refresh(String refreshToken) {
+        KeycloakTokenGateway.TokenResponse token = tokenGateway.refreshGrant(refreshToken.trim());
+        return toLoginResponse(token);
+    }
+
+    private LoginResponse toLoginResponse(KeycloakTokenGateway.TokenResponse token) {
         JwtClaims claims = parseAccessToken(token.accessToken());
         if (claims.tenantId() == null || claims.tenantId().isBlank()) {
             throw new InvalidCredentialsException();
