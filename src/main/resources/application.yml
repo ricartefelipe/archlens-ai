@@ -27,6 +27,7 @@ quarkus:
       headers: "*"
       exposed-headers: X-Correlation-Id
     auth:
+      proactive: false
       permission:
         health:
           paths: /q/*
@@ -34,7 +35,7 @@ quarkus:
         api:
           paths: /v1/*
           policy: authenticated
-          auth-mechanism: bearer
+          auth-mechanism: bearer,api-key
 
   log:
     console:
@@ -50,6 +51,15 @@ quarkus:
     info-title: ArchLens AI API
     info-version: 0.1.0
     info-description: Multi-tenant Architectural Intelligence Platform
+    security-scheme:
+      bearerAuth:
+        type: HTTP
+        scheme: bearer
+        bearer-format: JWT
+      apiKeyAuth:
+        type: APIKEY
+        in: header
+        api-key-name: X-Api-Key
 
   otel:
     enabled: false
@@ -57,6 +67,8 @@ quarkus:
   oidc:
     auth-server-url: http://localhost:8180/realms/archlens
     client-id: archlens-api
+    roles:
+      role-claim-path: realm_roles
     tls:
       verification: none
     token:
@@ -144,6 +156,7 @@ archlens:
     enabled: ${ARCHLENS_RLS_ENABLED:false}
   report:
     brand-name: ${ARCHLENS_REPORT_BRAND_NAME:ArchLens}
+    logo-url: ${ARCHLENS_REPORT_LOGO_URL:}
   commercial:
     enforce-quotas: ${ARCHLENS_ENFORCE_QUOTAS:true}
 

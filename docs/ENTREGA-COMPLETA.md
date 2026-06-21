@@ -17,42 +17,49 @@
 
 | # | Item | Status |
 |---|------|--------|
-| 7 | Export PDF + logo (`ARCHLENS_REPORT_LOGO_URL`) | ✅ |
-| 8 | OIDC PKCE (`NEXT_PUBLIC_OIDC_ENABLED`) | ✅ |
-| 9 | RLS PostgreSQL (migration 005) | ✅ |
-| 10 | E2E Playwright (`e2e/`) | ✅ |
-| 11 | Docker backend + frontend no compose | ✅ |
-| 12 | Roteiro demo (`docs/DEMO-SCRIPT.md`) | ✅ |
+| 7 | Export PDF + logo | ✅ |
+| 8 | OIDC PKCE | ✅ |
+| 9 | RLS PostgreSQL | ✅ |
+| 10 | E2E Playwright | ✅ |
+| 11 | Docker backend + frontend | ✅ |
+| 12 | Roteiro demo | ✅ |
 
-## Fase 3 — Quotas e planos comerciais ✅
+## Fase 3 — Quotas e planos ✅
 
 | # | Item | Status |
 |---|------|--------|
-| 13 | Quotas por tenant (projetos, análises, upload) | ✅ |
-| 14 | Planos PILOT/DIAGNOSTICO/PORTFOLIO/INTERNO | ✅ |
+| 13 | Quotas por tenant | ✅ |
+| 14 | Planos comerciais | ✅ |
 | 15 | API usage + admin upgrade | ✅ |
-| 16 | Painel de uso no frontend | ✅ |
+| 16 | Painel de uso frontend | ✅ |
 | 17 | ADR modelo comercial | ✅ |
+| 18 | UI admin tenants | ✅ |
 
-## Fase 3b — Pendente
-
-| # | Item |
-|---|------|
-| 18 | Billing Stripe |
-| 19 | Landing integrada |
-| 20 | Dashboard custo IA |
-
-## Fase 4 — Escala (em andamento)
+## Fase 4 — Plataforma ✅
 
 | # | Item | Status |
 |---|------|--------|
-| 21 | Comparativo before/after entre análises | ✅ |
-| 22 | Export comparativo (Markdown/JSON/PDF) | ✅ |
-| 22 | Analyzer Terraform (`.tf`, `.tfvars`) | ✅ |
-| 23 | Analyzer Kubernetes (manifests YAML) | ✅ |
-| 24 | Analyzer .NET | Pendente |
-| 25 | Portal organizações (RBAC) | Pendente |
+| 19 | Comparativo before/after | ✅ |
+| 20 | Export comparativo PDF/MD/JSON | ✅ |
+| 21 | Analyzer Terraform | ✅ |
+| 22 | Analyzer Kubernetes | ✅ |
+| 23 | Analyzer .NET | ✅ |
+| 24 | Portal org (membros + convites) | ✅ |
+| 25 | API keys + OpenAPI | ✅ |
+| 26 | Webhooks análise | ✅ |
+| 27 | White-label (UI + PDF) | ✅ |
+| 28 | Runbook produção | ✅ |
+| 29 | E2E comparativo | ✅ |
+
+## Fase 3b / Fase 5 — Fora do escopo atual
+
+| Item |
+|------|
+| Stripe / billing online |
+| Landing integrada |
+| Dashboard custo IA |
+| SaaS self-service |
 
 ---
 
-Documentação: [AVALIACAO-PONTA-A-PONTA.md](./AVALIACAO-PONTA-A-PONTA.md) · [ROADMAP-PRODUTO.md](./ROADMAP-PRODUTO.md)
+Documentação: [RUNBOOK-PRODUCAO.md](./RUNBOOK-PRODUCAO.md) · [ROADMAP-PRODUTO.md](./ROADMAP-PRODUTO.md)

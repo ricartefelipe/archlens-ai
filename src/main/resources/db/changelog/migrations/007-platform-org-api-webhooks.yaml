@@ -1,0 +1,224 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-01-org-members
+      author: archlens
+      changes:
+        - createTable:
+            tableName: org_members
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: org_members
+            columnNames: tenant_id, email
+            constraintName: uk_org_members_tenant_email
+        - createIndex:
+            tableName: org_members
+            indexName: idx_org_members_tenant_id
+            columns:
+              - column:
+                  name: tenant_id
+
+  - changeSet:
+      id: 007-02-org-invites
+      author: archlens
+      changes:
+        - createTable:
+            tableName: org_invites
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: email
+                  type: varchar(320)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: role
+                  type: varchar(32)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: token_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: expires_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: accepted_at
+                  type: timestamp with time zone
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: org_invites
+            indexName: idx_org_invites_token_hash
+            columns:
+              - column:
+                  name: token_hash
+
+  - changeSet:
+      id: 007-03-api-keys
+      author: archlens
+      changes:
+        - createTable:
+            tableName: api_keys
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: name
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key_prefix
+                  type: varchar(16)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: key_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: scopes
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: revoked_at
+                  type: timestamp with time zone
+              - column:
+                  name: last_used_at
+                  type: timestamp with time zone
+        - createIndex:
+            tableName: api_keys
+            indexName: idx_api_keys_tenant_id
+            columns:
+              - column:
+                  name: tenant_id
+        - createIndex:
+            tableName: api_keys
+            indexName: idx_api_keys_key_hash
+            columns:
+              - column:
+                  name: key_hash
+
+  - changeSet:
+      id: 007-04-tenant-webhooks
+      author: archlens
+      changes:
+        - createTable:
+            tableName: tenant_webhooks
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: tenant_id
+                  type: varchar(128)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: url
+                  type: varchar(2048)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: secret_hash
+                  type: varchar(64)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: events
+                  type: varchar(256)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: enabled
+                  type: boolean
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+              - column:
+                  name: updated_at
+                  type: timestamp with time zone
+                  constraints:
+                    nullable: false
+        - createIndex:
+            tableName: tenant_webhooks
+            indexName: idx_tenant_webhooks_tenant_id
+            columns:
+              - column:
+                  name: tenant_id

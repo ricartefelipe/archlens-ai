@@ -18,6 +18,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
+  // Rotas /admin/* exigem autenticação; autorização de platform admin é feita no layout client-side.
   return NextResponse.next();
 }
 

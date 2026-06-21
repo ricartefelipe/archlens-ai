@@ -1,6 +1,7 @@
 from app.analysis.analyzers import (
     AnalyzerFactory,
     DockerAnalyzer,
+    DotNetAnalyzer,
     JavaAnalyzer,
     KubernetesAnalyzer,
     MigrationAnalyzer,
@@ -95,8 +96,63 @@ def test_pipeline_analyzer_flags_missing_stages():
     assert RiskCategory.LACK_OF_OBSERVABILITY in categories
 
 
+def test_dotnet_analyzer_flags_connection_string():
+    content = """
+    public class DbConfig {
+        public string ConnectionString = "Server=localhost;Database=app;User=sa;Password=secret";
+    }
+    """
+    findings = DotNetAnalyzer().analyze("DbConfig.cs", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.SECURITY_RISK in categories
+    assert any(f.severity == RiskSeverity.CRITICAL for f in findings)
+
+
+def test_dotnet_analyzer_flags_async_void():
+    content = """
+    public class Worker {
+        public async void Process() {
+            await Task.Delay(1);
+        }
+    }
+    """
+    findings = DotNetAnalyzer().analyze("Worker.cs", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.CONTRACT_VIOLATION in categories
+
+
+def test_dotnet_analyzer_flags_fat_controller():
+    methods = "\n".join(
+        f"        public IActionResult Action{i}() {{ return Ok(); }}" for i in range(9)
+    )
+    content = f"""
+    [ApiController]
+    public class OrdersController {{
+{methods}
+    }}
+    """
+    findings = DotNetAnalyzer().analyze("OrdersController.cs", content)
+    categories = _categories(findings)
+
+    assert RiskCategory.EXCESSIVE_COUPLING in categories
+
+
+def test_dotnet_analyzer_clean_class_has_no_findings():
+    content = """
+    public class Money {
+        private readonly decimal _amount;
+        public Money(decimal amount) { _amount = amount; }
+        public decimal Amount => _amount;
+    }
+    """
+    assert DotNetAnalyzer().analyze("Money.cs", content) == []
+
+
 def test_analyzer_factory_dispatch():
     assert any(isinstance(a, JavaAnalyzer) for a in AnalyzerFactory.get_analyzers("App.java"))
+    assert any(isinstance(a, DotNetAnalyzer) for a in AnalyzerFactory.get_analyzers("Program.cs"))
     assert any(isinstance(a, MigrationAnalyzer) for a in AnalyzerFactory.get_analyzers("001.sql"))
     assert any(isinstance(a, DockerAnalyzer) for a in AnalyzerFactory.get_analyzers("Dockerfile"))
     assert any(isinstance(a, OpenApiAnalyzer) for a in AnalyzerFactory.get_analyzers("api/openapi.yaml"))

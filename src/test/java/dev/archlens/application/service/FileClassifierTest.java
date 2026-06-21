@@ -54,6 +54,8 @@ class FileClassifierTest {
     void classifiesByExtension() {
         assertAll(
                 () -> assertEquals(FileType.JAVA, classifier.classify("src/Main.java")),
+                () -> assertEquals(FileType.DOTNET, classifier.classify("src/Program.cs")),
+                () -> assertEquals(FileType.DOTNET, classifier.classify("Controllers/OrderController.cs")),
                 () -> assertEquals(FileType.KOTLIN, classifier.classify("Main.kt")),
                 () -> assertEquals(FileType.PYTHON, classifier.classify("app/main.py")),
                 () -> assertEquals(FileType.SQL, classifier.classify("db/001.sql")),
@@ -73,6 +75,7 @@ class FileClassifierTest {
                 () -> assertFalse(classifier.isRelevant("assets/logo.png")),
                 () -> assertFalse(classifier.isRelevant("data.bin")),
                 () -> assertTrue(classifier.isRelevant("src/main/java/App.java")),
+                () -> assertTrue(classifier.isRelevant("src/Program.cs")),
                 () -> assertTrue(classifier.isRelevant("infra/main.tf")),
                 () -> assertTrue(classifier.isRelevant("pom.xml")));
     }

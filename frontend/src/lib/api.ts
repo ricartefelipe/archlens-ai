@@ -1,4 +1,19 @@
-import type { Project, ProjectFile, Analysis, Adr, Question, AccountUsage, AnalysisComparison } from './types';
+import type {
+  Project,
+  ProjectFile,
+  Analysis,
+  Adr,
+  Question,
+  AccountUsage,
+  AnalysisComparison,
+  OrgMember,
+  OrgInvite,
+  OrgMemberRole,
+  ApiKey,
+  CreateApiKeyResponse,
+  TenantWebhook,
+  AdminTenant,
+} from './types';
 import { getAccessToken } from './auth';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -216,4 +231,96 @@ export async function downloadComparisonReport(
   anchor.download = fileName;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+export async function listOrgMembers(tenantId: string): Promise<OrgMember[]> {
+  return apiFetch('/v1/org/members', tenantId);
+}
+
+export async function removeOrgMember(tenantId: string, memberId: string): Promise<void> {
+  await apiFetch(`/v1/org/members/${memberId}`, tenantId, { method: 'DELETE' });
+}
+
+export async function listOrgInvites(tenantId: string): Promise<OrgInvite[]> {
+  return apiFetch('/v1/org/invites', tenantId);
+}
+
+export async function createOrgInvite(
+  tenantId: string,
+  email: string,
+  role: OrgMemberRole
+): Promise<OrgInvite> {
+  return apiFetch('/v1/org/invites', tenantId, {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function listApiKeys(tenantId: string): Promise<ApiKey[]> {
+  return apiFetch('/v1/account/api-keys', tenantId);
+}
+
+export async function createApiKey(
+  tenantId: string,
+  name: string,
+  scopes = 'read,write'
+): Promise<CreateApiKeyResponse> {
+  return apiFetch('/v1/account/api-keys', tenantId, {
+    method: 'POST',
+    body: JSON.stringify({ name, scopes }),
+  });
+}
+
+export async function revokeApiKey(tenantId: string, keyId: string): Promise<void> {
+  await apiFetch(`/v1/account/api-keys/${keyId}`, tenantId, { method: 'DELETE' });
+}
+
+export async function listWebhooks(tenantId: string): Promise<TenantWebhook[]> {
+  return apiFetch('/v1/account/webhooks', tenantId);
+}
+
+export async function createWebhook(
+  tenantId: string,
+  url: string,
+  events: string[] = ['analysis.completed']
+): Promise<TenantWebhook> {
+  return apiFetch('/v1/account/webhooks', tenantId, {
+    method: 'POST',
+    body: JSON.stringify({ url, events }),
+  });
+}
+
+export async function deleteWebhook(tenantId: string, webhookId: string): Promise<void> {
+  await apiFetch(`/v1/account/webhooks/${webhookId}`, tenantId, { method: 'DELETE' });
+}
+
+export async function listAdminTenants(tenantId: string): Promise<AdminTenant[]> {
+  return apiFetch('/v1/admin/tenants', tenantId);
+}
+
+export async function getAdminTenant(tenantId: string, targetTenantId: string): Promise<AdminTenant> {
+  return apiFetch(`/v1/admin/tenants/${targetTenantId}`, tenantId);
+}
+
+export async function updateAdminTenantStatus(
+  tenantId: string,
+  targetTenantId: string,
+  status: 'ACTIVE' | 'SUSPENDED'
+): Promise<AdminTenant> {
+  return apiFetch(`/v1/admin/tenants/${targetTenantId}/status`, tenantId, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function upgradeAdminTenantPlan(
+  tenantId: string,
+  targetTenantId: string,
+  plan: string,
+  notes?: string
+): Promise<AccountUsage> {
+  return apiFetch(`/v1/admin/tenants/${targetTenantId}/plan`, tenantId, {
+    method: 'PUT',
+    body: JSON.stringify({ plan, notes: notes ?? '' }),
+  });
 }
