@@ -15,11 +15,11 @@ import type {
   TenantWebhook,
   AdminTenant,
 } from './types';
-import { getApiBase } from './api-base';
+import { getApiBase, newCorrelationId } from './api-base';
 import { getAccessToken } from './auth';
 
 function correlationId(): string {
-  return crypto.randomUUID();
+  return newCorrelationId();
 }
 
 async function apiFetch<T>(path: string, tenantId: string, options: RequestInit = {}): Promise<T> {
