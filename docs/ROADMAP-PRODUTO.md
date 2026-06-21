@@ -45,6 +45,9 @@
 - [x] Comparativo before/after entre análises
 - [x] Export comparativo (Markdown/JSON/PDF)
 - [x] Runbook produção (`docs/RUNBOOK-PRODUCAO.md`)
+- [x] RLS tabelas plataforma (migration 008)
+- [x] Página aceitar convite (`/invite`)
+- [x] Bootstrap ORG_ADMIN no primeiro acesso
 
 ## Fase 5 — SaaS (opcional, se mudar estratégia)
 

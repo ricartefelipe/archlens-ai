@@ -1,0 +1,50 @@
+databaseChangeLog:
+  - changeSet:
+      id: "008-01-enable-rls-platform-tables"
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE org_invites ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE api_keys ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE tenant_webhooks ENABLE ROW LEVEL SECURITY;
+              ALTER TABLE tenant_accounts ENABLE ROW LEVEL SECURITY;
+
+  - changeSet:
+      id: "008-02-create-rls-policies-platform-tables"
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              CREATE POLICY tenant_access_org_members ON org_members
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_org_invites ON org_invites
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_api_keys ON api_keys
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_tenant_webhooks ON tenant_webhooks
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );
+
+              CREATE POLICY tenant_access_tenant_accounts ON tenant_accounts
+                USING (
+                  current_setting('app.rls_bypass', true) = 'on'
+                  OR COALESCE(NULLIF(current_setting('app.current_tenant', true), ''), tenant_id) = tenant_id
+                );

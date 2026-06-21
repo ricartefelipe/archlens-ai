@@ -50,6 +50,10 @@
 | 27 | White-label (UI + PDF) | ✅ |
 | 28 | Runbook produção | ✅ |
 | 29 | E2E comparativo | ✅ |
+| 30 | RLS tabelas plataforma (008) | ✅ |
+| 31 | Página aceitar convite | ✅ |
+| 32 | Bootstrap ORG_ADMIN | ✅ |
+| 33 | E2E settings/admin/convite | ✅ |
 
 ## Fase 3b / Fase 5 — Fora do escopo atual
 

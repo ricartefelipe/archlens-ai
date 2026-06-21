@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public record OrgMemberResponse(
         UUID id,
+        String tenantId,
         String email,
         String role,
         String status,

@@ -8,6 +8,7 @@ import type {
   AnalysisComparison,
   OrgMember,
   OrgInvite,
+  OrgInviteCreated,
   OrgMemberRole,
   ApiKey,
   CreateApiKeyResponse,
@@ -249,10 +250,21 @@ export async function createOrgInvite(
   tenantId: string,
   email: string,
   role: OrgMemberRole
-): Promise<OrgInvite> {
+): Promise<OrgInviteCreated> {
   return apiFetch('/v1/org/invites', tenantId, {
     method: 'POST',
     body: JSON.stringify({ email, role }),
+  });
+}
+
+export async function acceptOrgInvite(
+  tenantId: string,
+  token: string,
+  email: string
+): Promise<OrgMember> {
+  return apiFetch('/v1/org/invites/accept', tenantId, {
+    method: 'POST',
+    body: JSON.stringify({ token, email }),
   });
 }
 

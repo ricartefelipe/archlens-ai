@@ -25,6 +25,7 @@ public class PlatformDtoMapper {
     public OrgMemberResponse toMemberResponse(OrgMember member) {
         return new OrgMemberResponse(
                 member.getId(),
+                member.getTenantId(),
                 member.getEmail(),
                 member.getRole().name(),
                 member.getStatus().name(),

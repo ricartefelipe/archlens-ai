@@ -135,4 +135,18 @@ public class OrgService {
                         && m.getRole() == OrgMemberRole.ORG_ADMIN)
                 .orElse(false);
     }
+
+    @Transactional
+    public OrgMember ensureBootstrapAdmin(String tenantId, String email) {
+        boolean hasActiveMember = memberRepository.findAllByTenantId(tenantId).stream()
+                .anyMatch(m -> m.getStatus() == OrgMemberStatus.ACTIVE);
+        if (hasActiveMember) {
+            return null;
+        }
+
+        String bootstrapEmail = (email != null && !email.isBlank())
+                ? email.toLowerCase().trim()
+                : "admin@" + tenantId + ".local";
+        return addMember(tenantId, bootstrapEmail, OrgMemberRole.ORG_ADMIN);
+    }
 }

@@ -105,6 +105,27 @@ class OrgServiceTest {
         assertTrue(!orgService.isOrgAdmin("tenant-a", "member@example.com"));
     }
 
+    @Test
+    @DisplayName("bootstrap cria ORG_ADMIN quando tenant vazio")
+    void bootstrapCreatesAdminWhenEmpty() {
+        OrgMember member = orgService.ensureBootstrapAdmin("tenant-a", "owner@example.com");
+
+        assertEquals("owner@example.com", member.getEmail());
+        assertEquals(OrgMemberRole.ORG_ADMIN, member.getRole());
+        assertTrue(orgService.isOrgAdmin("tenant-a", "owner@example.com"));
+    }
+
+    @Test
+    @DisplayName("bootstrap não duplica admin existente")
+    void bootstrapSkipsWhenMembersExist() {
+        orgService.addMember("tenant-a", "existing@example.com", OrgMemberRole.ORG_MEMBER);
+
+        OrgMember member = orgService.ensureBootstrapAdmin("tenant-a", "owner@example.com");
+
+        assertEquals(null, member);
+        assertEquals(1, orgService.listMembers("tenant-a").size());
+    }
+
     private static final class InMemoryOrgMemberRepository implements OrgMemberRepositoryPort {
         private final List<OrgMember> store = new ArrayList<>();
 
