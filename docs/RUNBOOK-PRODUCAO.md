@@ -93,16 +93,17 @@ Internet
 
 ## 4. Deploy (Docker Compose referência)
 
-Para produção single-node ou staging:
+Para produção single-node ou staging local:
 
 ```bash
 cp .env.example .env
 # editar secrets e URLs
 docker compose up -d --build
-./mvnw package -DskipTests   # ou imagem CI
 ```
 
-Serviços: postgres, rabbitmq, keycloak, worker-ai, backend, frontend.
+**AWS EC2 (piloto/prod — padrão Fluxe):** ver [DEPLOY-AWS-EC2.md](./DEPLOY-AWS-EC2.md).
+
+Serviços: postgres, rabbitmq, keycloak, worker-ai, backend, frontend (+ nginx na EC2).
 
 ---
 
