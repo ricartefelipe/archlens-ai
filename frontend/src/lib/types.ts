@@ -99,3 +99,66 @@ export interface SeverityChangedRisk {
   baselineRisk: ArchitecturalRisk;
   currentRisk: ArchitecturalRisk;
 }
+
+export type OrgMemberRole = 'ORG_ADMIN' | 'ORG_MEMBER' | 'ORG_VIEWER';
+
+export type OrgMemberStatus = 'ACTIVE' | 'INVITED' | 'REMOVED';
+
+export interface OrgMember {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: OrgMemberRole;
+  status: OrgMemberStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrgInvite {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: OrgMemberRole;
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKey {
+  id: string;
+  tenantId: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string;
+  createdAt: string;
+  revokedAt: string | null;
+  lastUsedAt: string | null;
+}
+
+export interface CreateApiKeyResponse extends ApiKey {
+  plainKey: string;
+}
+
+export interface TenantWebhook {
+  id: string;
+  tenantId: string;
+  url: string;
+  events: string;
+  enabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminTenant {
+  tenantId: string;
+  plan: string;
+  planDisplayName: string;
+  status: string;
+  projectsUsed: number;
+  projectsLimit: number;
+  analysesUsed: number;
+  analysesLimit: number;
+  uploadMbUsed: number;
+  uploadMbLimit: number;
+  usagePeriodStart: string;
+}

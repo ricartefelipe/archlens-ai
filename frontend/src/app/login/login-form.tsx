@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Layers } from 'lucide-react';
 import { keycloakEnabled, login, loginWithKeycloak } from '@/lib/auth';
 import { oidcEnabled, signInWithPkce } from '@/lib/oidc';
+import { APP_NAME } from '@/lib/branding';
+import { AppLogo } from '@/components/app-logo';
 
 export function LoginForm() {
   const router = useRouter();
@@ -45,10 +46,8 @@ export function LoginForm() {
   return (
     <div className="w-full max-w-sm">
       <div className="flex flex-col items-center mb-8">
-        <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center mb-4">
-          <Layers className="w-8 h-8 text-primary-foreground" />
-        </div>
-        <h1 className="text-2xl font-bold text-foreground">ArchLens AI</h1>
+        <AppLogo size="md" className="mb-4" />
+        <h1 className="text-2xl font-bold text-foreground">{APP_NAME}</h1>
         <p className="text-sm text-muted-foreground mt-1">Plataforma de diagnóstico arquitetural</p>
       </div>
 

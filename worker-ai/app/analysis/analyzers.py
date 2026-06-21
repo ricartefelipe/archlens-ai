@@ -603,10 +603,65 @@ class KubernetesAnalyzer(BaseAnalyzer):
         return match.group(1).lower() if match else ""
 
 
+class DotNetAnalyzer(BaseAnalyzer):
+    _CONNECTION_STRING = re.compile(
+        r'ConnectionString\s*=\s*"(?!["\s]*\$)([^"]{8,})"',
+        re.MULTILINE | re.IGNORECASE,
+    )
+    _ASYNC_VOID = re.compile(r"\basync\s+void\s+\w+\s*\(", re.MULTILINE)
+    _CONTROLLER_ATTR = re.compile(r"\[(?:Api)?Controller\]", re.MULTILINE)
+    _PUBLIC_METHOD = re.compile(
+        r"^\s*public\s+(?!class|interface|enum|struct|record|event|const|static\s+readonly)"
+        r"(?:async\s+)?(?:Task(?:<[^>]+>)?\s+|void\s+|[\w<>,\[\]\.]+\s+)\w+\s*\(",
+        re.MULTILINE,
+    )
+
+    def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
+        findings: list[RiskFinding] = []
+
+        for match in self._CONNECTION_STRING.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="Connection string hardcoded",
+                description="Credenciais de banco em plain text no código expõem o ambiente e dificultam rotação de segredos.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Usar IConfiguration, User Secrets, Azure Key Vault ou variáveis de ambiente",
+            ))
+
+        for match in self._ASYNC_VOID.finditer(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.CONTRACT_VIOLATION,
+                severity=RiskSeverity.MEDIUM,
+                title="Método async void",
+                description="async void impede await e propaga exceções de forma imprevisível; prefira async Task.",
+                file_path=file_path,
+                evidence=match.group(0).strip()[:100],
+                suggestion="Alterar retorno para Task ou Task<T> e aguardar chamadas com await",
+            ))
+
+        if self._CONTROLLER_ATTR.search(content):
+            methods = self._PUBLIC_METHOD.findall(content)
+            if len(methods) > 8:
+                findings.append(RiskFinding(
+                    category=RiskCategory.EXCESSIVE_COUPLING,
+                    severity=RiskSeverity.MEDIUM,
+                    title="Controller com muitos métodos",
+                    description=f"Controller possui {len(methods)} métodos públicos. Controllers devem ser enxutos, delegando lógica para serviços.",
+                    file_path=file_path,
+                    evidence=f"{len(methods)} métodos públicos encontrados",
+                    suggestion="Dividir em múltiplos controllers ou extrair lógica para application services",
+                ))
+
+        return findings
+
+
 class AnalyzerFactory:
     _ANALYZERS: dict[str, list[type[BaseAnalyzer]]] = {
         ".java": [JavaAnalyzer],
         ".kt": [JavaAnalyzer],
+        ".cs": [DotNetAnalyzer],
         ".sql": [MigrationAnalyzer],
         ".tf": [TerraformAnalyzer],
         ".tfvars": [TerraformAnalyzer],

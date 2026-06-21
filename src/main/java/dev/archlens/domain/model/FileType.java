@@ -3,6 +3,7 @@ package dev.archlens.domain.model;
 public enum FileType {
 
     JAVA("Java Source"),
+    DOTNET(".NET Source"),
     KOTLIN("Kotlin Source"),
     XML("XML Configuration"),
     YAML("YAML Configuration"),

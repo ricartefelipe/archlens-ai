@@ -2,7 +2,9 @@ package dev.archlens.infrastructure.messaging;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.eclipse.microprofile.reactive.messaging.Incoming;
@@ -22,6 +24,7 @@ import dev.archlens.domain.model.ArchitecturalRisk;
 import dev.archlens.domain.model.RiskCategory;
 import dev.archlens.domain.model.RiskSeverity;
 import dev.archlens.application.service.QuotaService;
+import dev.archlens.application.service.WebhookService;
 import dev.archlens.infrastructure.persistence.rls.TenantRlsService;
 import io.smallrye.common.annotation.Blocking;
 import io.vertx.core.json.JsonObject;
@@ -44,6 +47,7 @@ public class AnalysisConsumer {
 
     private final TenantRlsService tenantRlsService;
     private final QuotaService quotaService;
+    private final WebhookService webhookService;
 
     @Inject
     public AnalysisConsumer(AnalysisRepositoryPort analysisRepository,
@@ -51,13 +55,15 @@ public class AnalysisConsumer {
                             LlmGateway llmGateway,
                             AdrRepositoryPort adrRepository,
                             TenantRlsService tenantRlsService,
-                            QuotaService quotaService) {
+                            QuotaService quotaService,
+                            WebhookService webhookService) {
         this.analysisRepository = analysisRepository;
         this.analysisGateway = analysisGateway;
         this.llmGateway = llmGateway;
         this.adrRepository = adrRepository;
         this.tenantRlsService = tenantRlsService;
         this.quotaService = quotaService;
+        this.webhookService = webhookService;
     }
 
     @Incoming("analysis-requests-in")
@@ -141,6 +147,8 @@ public class AnalysisConsumer {
 
             quotaService.recordAnalysis(event.tenantId());
 
+            dispatchWebhook(event, analysis, WebhookService.EVENT_ANALYSIS_COMPLETED);
+
             generateAdrs(analysis, staticResult.findings(), event.tenantId());
 
         } catch (Exception e) {
@@ -149,7 +157,19 @@ public class AnalysisConsumer {
             analysis.setSummary(e.getMessage());
             analysis.setUpdatedAt(Instant.now());
             analysisRepository.save(analysis);
+
+            dispatchWebhook(event, analysis, WebhookService.EVENT_ANALYSIS_FAILED);
         }
+    }
+
+    private void dispatchWebhook(AnalysisEvent event, Analysis analysis, String webhookEvent) {
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("analysisId", analysis.getId().toString());
+        payload.put("projectId", event.projectId().toString());
+        payload.put("tenantId", event.tenantId());
+        payload.put("status", analysis.getStatus().name());
+        payload.put("summary", analysis.getSummary());
+        webhookService.dispatch(event.tenantId(), webhookEvent, payload);
     }
 
     private void generateAdrs(Analysis analysis, List<AnalysisGateway.RiskFindingDto> findings, String tenantId) {
