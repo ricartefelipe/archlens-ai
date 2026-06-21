@@ -80,7 +80,12 @@ public final class OpenAiHttpLlmGateway implements LlmGateway {
                 Respondes em português de forma técnica e concisa.
                 Baseia-te apenas no contexto fornecido; se faltar informação, indica-o explicitamente.""";
         String user = "Contexto:\n" + analysisContext + "\n\nPergunta:\n" + question;
-        return chatCompletion(system, user).trim();
+        try {
+            return chatCompletion(system, user).trim();
+        } catch (Exception e) {
+            LOG.warnf(e, "OpenAI indisponível; fallback contextual local");
+            return ContextualRagAnswerBuilder.build(question, analysisContext);
+        }
     }
 
     private LlmRiskFinding parseFinding(JsonNode n) {

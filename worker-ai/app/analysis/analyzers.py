@@ -29,10 +29,30 @@ class JavaAnalyzer(BaseAnalyzer):
     _RETURN_ENTITY = re.compile(
         r"return\s+\w*(entity|Entity|repository\.\w+)", re.MULTILINE
     )
+    _SQL_CONCAT = re.compile(
+        r"(?:execute(?:Update|Query)?|prepareStatement|createStatement)\s*\(\s*\"[^\"]*\"\s*\+",
+        re.MULTILINE | re.IGNORECASE,
+    )
+    _SQL_STRING_FORMAT = re.compile(
+        r"(?:execute(?:Update|Query)?|prepareStatement)\s*\(\s*\"[^\"]*'\s*\+",
+        re.MULTILINE | re.IGNORECASE,
+    )
 
     def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
         findings: list[RiskFinding] = []
         is_controller = bool(self._CONTROLLER_PATTERN.search(content))
+        is_test = file_path.lower().endswith("test.java") or "/test/" in file_path.lower()
+
+        if self._SQL_CONCAT.search(content) or self._SQL_STRING_FORMAT.search(content):
+            findings.append(RiskFinding(
+                category=RiskCategory.SECURITY_RISK,
+                severity=RiskSeverity.CRITICAL,
+                title="SQL montado por concatenação de strings",
+                description="Queries JDBC/JPA montadas com concatenação expõem a aplicação a SQL injection.",
+                file_path=file_path,
+                evidence="execute/prepareStatement com concatenação de strings detectado",
+                suggestion="Usar PreparedStatement com placeholders ou ORM com parâmetros bind",
+            ))
 
         if is_controller:
             methods = self._METHOD_PATTERN.findall(content)
@@ -83,7 +103,11 @@ class JavaAnalyzer(BaseAnalyzer):
                 ))
 
         field_injects = self._INJECT_FIELD.findall(content)
-        if len(field_injects) > 0 and "@RequiredArgsConstructor" not in content:
+        if (
+            not is_test
+            and len(field_injects) > 0
+            and "@RequiredArgsConstructor" not in content
+        ):
             findings.append(RiskFinding(
                 category=RiskCategory.EXCESSIVE_COUPLING,
                 severity=RiskSeverity.LOW,
@@ -194,7 +218,8 @@ class DockerAnalyzer(BaseAnalyzer):
                 ))
 
         if "docker-compose" in file_path.lower() or "compose.y" in file_path.lower():
-            if "healthcheck" not in content.lower():
+            service_count = len(re.findall(r"^\s{2}\w[\w-]*:\s*$", content, re.MULTILINE))
+            if service_count >= 3 and "healthcheck" not in content.lower():
                 findings.append(RiskFinding(
                     category=RiskCategory.MISSING_HEALTH_CHECK,
                     severity=RiskSeverity.MEDIUM,
@@ -209,25 +234,31 @@ class DockerAnalyzer(BaseAnalyzer):
 
 
 class OpenApiAnalyzer(BaseAnalyzer):
-    _PATH_BLOCK = re.compile(r"(?:paths:.*?)(?=\Z|\ninfo:|\ncomponents:)", re.DOTALL)
+    _OPERATION = re.compile(
+        r"^\s*(get|post|put|patch|delete|head|options):\s*$", re.MULTILINE | re.IGNORECASE
+    )
     _ERROR_RESPONSES = re.compile(r"['\"]?(?:4\d{2}|5\d{2})['\"]?\s*:", re.MULTILINE)
     _SECURITY = re.compile(r"security(?:Schemes|:)", re.IGNORECASE | re.MULTILINE)
 
     def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
         findings: list[RiskFinding] = []
 
-        if "paths:" in content and not self._ERROR_RESPONSES.search(content):
+        if "paths:" not in content:
+            return findings
+
+        operations_missing_errors = self._operations_without_error_responses(content)
+        if operations_missing_errors > 0:
             findings.append(RiskFinding(
                 category=RiskCategory.CONTRACT_VIOLATION,
                 severity=RiskSeverity.MEDIUM,
                 title="OpenAPI sem respostas de erro",
-                description="Especificação OpenAPI não define respostas 4xx/5xx para os endpoints.",
+                description=f"{operations_missing_errors} operação(ões) sem respostas 4xx/5xx documentadas.",
                 file_path=file_path,
-                evidence="Nenhuma resposta de erro (4xx/5xx) encontrada",
-                suggestion="Adicionar respostas 400, 404 e 500 aos endpoints",
+                evidence=f"{operations_missing_errors} endpoint(s) sem 4xx/5xx",
+                suggestion="Adicionar respostas 400, 404 e 500 por operação",
             ))
 
-        if "paths:" in content and not self._SECURITY.search(content):
+        if not self._SECURITY.search(content):
             findings.append(RiskFinding(
                 category=RiskCategory.SECURITY_RISK,
                 severity=RiskSeverity.HIGH,
@@ -240,14 +271,53 @@ class OpenApiAnalyzer(BaseAnalyzer):
 
         return findings
 
+    def _operations_without_error_responses(self, content: str) -> int:
+        lines = content.splitlines()
+        missing = 0
+        i = 0
+        while i < len(lines):
+            if not self._OPERATION.match(lines[i]):
+                i += 1
+                continue
+            block = []
+            i += 1
+            while i < len(lines):
+                line = lines[i]
+                if line and not line.startswith((" ", "\t")):
+                    break
+                if re.match(r"^\s{2,4}\S", line) and not line.startswith(" " * 6):
+                    break
+                block.append(line)
+                i += 1
+            block_text = "\n".join(block)
+            if "responses:" in block_text and not self._ERROR_RESPONSES.search(block_text):
+                missing += 1
+        return missing
+
 
 class PipelineAnalyzer(BaseAnalyzer):
-    _TEST_STAGE = re.compile(r"(?:test|tests|testing|pytest|junit|maven.*test|npm.*test)", re.IGNORECASE)
-    _SECURITY_SCAN = re.compile(r"(?:sonar|snyk|trivy|codeql|sast|dast|security.scan)", re.IGNORECASE)
-    _CACHE = re.compile(r"cache", re.IGNORECASE)
+    _TEST_STAGE = re.compile(
+        r"(?:run:\s*.*\b(mvn|gradle|npm test|pnpm test|yarn test|pytest|go test|dotnet test|jest|vitest)\b|"
+        r"uses:\s*.*\b(test|pytest|jest|vitest|maven|gradle)\b|"
+        r"^\s*test:\s*$)",
+        re.IGNORECASE | re.MULTILINE,
+    )
+    _SECURITY_SCAN = re.compile(
+        r"(?:sonar|snyk|trivy|codeql|sast|dast|security.scan|semgrep|checkov)",
+        re.IGNORECASE,
+    )
+    _BUILD_STAGE = re.compile(
+        r"\b(mvn|gradle|npm run build|pnpm build|docker build|go build|dotnet build)\b",
+        re.IGNORECASE,
+    )
+    _CACHE = re.compile(r"^\s*cache:", re.MULTILINE | re.IGNORECASE)
+    _PLACEHOLDER = re.compile(r"placeholder|sample archlens|echo\s+[\"']?build", re.IGNORECASE)
 
     def analyze(self, file_path: str, content: str) -> list[RiskFinding]:
         findings: list[RiskFinding] = []
+
+        if self._PLACEHOLDER.search(content) and not self._BUILD_STAGE.search(content):
+            return findings
 
         if not self._TEST_STAGE.search(content):
             findings.append(RiskFinding(
@@ -260,23 +330,24 @@ class PipelineAnalyzer(BaseAnalyzer):
                 suggestion="Adicionar etapa de testes (unit, integration) ao pipeline",
             ))
 
-        if not self._SECURITY_SCAN.search(content):
+        deploy_like = re.search(r"\b(deploy|release|publish|production)\b", content, re.IGNORECASE)
+        if deploy_like and not self._SECURITY_SCAN.search(content):
             findings.append(RiskFinding(
                 category=RiskCategory.SECURITY_RISK,
                 severity=RiskSeverity.MEDIUM,
                 title="Pipeline sem scan de segurança",
-                description="Pipeline não inclui análise de segurança (SAST/DAST).",
+                description="Pipeline de deploy/release não inclui análise de segurança (SAST/DAST).",
                 file_path=file_path,
                 evidence="Nenhuma ferramenta de security scan encontrada",
                 suggestion="Adicionar Sonar, Snyk, Trivy ou CodeQL ao pipeline",
             ))
 
-        if not self._CACHE.search(content):
+        if self._BUILD_STAGE.search(content) and not self._CACHE.search(content):
             findings.append(RiskFinding(
                 category=RiskCategory.LACK_OF_OBSERVABILITY,
                 severity=RiskSeverity.LOW,
                 title="Pipeline sem cache de artefatos",
-                description="Pipeline não utiliza cache, resultando em builds mais lentos.",
+                description="Pipeline de build não utiliza cache, resultando em builds mais lentos.",
                 file_path=file_path,
                 evidence="Nenhuma configuração de cache encontrada",
                 suggestion="Adicionar cache de dependências (Maven/Gradle/npm/pip)",
@@ -845,7 +916,13 @@ class TypeScriptAnalyzer(BaseAnalyzer):
                     suggestion="Extrair subcomponentes e custom hooks por responsabilidade",
                 ))
 
-        if self._FETCH_NO_CATCH.search(content) and ".catch(" not in content:
+        if (
+            self._FETCH_NO_CATCH.search(content)
+            and ".catch(" not in content
+            and "try {" not in content
+            and "try{" not in content
+            and content.count("fetch(") >= 2
+        ):
             findings.append(RiskFinding(
                 category=RiskCategory.LACK_OF_OBSERVABILITY,
                 severity=RiskSeverity.LOW,

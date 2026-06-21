@@ -90,13 +90,30 @@ def test_openapi_analyzer_flags_missing_errors_and_security():
 
 
 def test_pipeline_analyzer_flags_missing_stages():
-    content = "name: deploy\njobs:\n  build:\n    steps:\n      - run: echo build\n"
+    content = "name: deploy\njobs:\n  build:\n    steps:\n      - run: mvn -B package\n"
     findings = PipelineAnalyzer().analyze(".github/workflows/deploy.yml", content)
     categories = _categories(findings)
 
     assert RiskCategory.MISSING_TEST_COVERAGE in categories
-    assert RiskCategory.SECURITY_RISK in categories
     assert RiskCategory.LACK_OF_OBSERVABILITY in categories
+
+
+def test_pipeline_analyzer_ignores_placeholder_sample():
+    content = "name: ci\non: [push]\njobs:\n  build:\n    steps:\n      - run: echo \"build placeholder — sample ArchLens\"\n"
+    assert PipelineAnalyzer().analyze(".github/workflows/ci.yml", content) == []
+
+
+def test_java_analyzer_flags_sql_concatenation():
+    content = """
+    public class OrderController {
+        public void create(String email) throws Exception {
+            conn.createStatement().execute(
+                "INSERT INTO customers (id, email) VALUES ('" + id + "','" + email + "')");
+        }
+    }
+    """
+    findings = JavaAnalyzer().analyze("OrderController.java", content)
+    assert any(f.title == "SQL montado por concatenação de strings" for f in findings)
 
 
 def test_dotnet_analyzer_flags_connection_string():

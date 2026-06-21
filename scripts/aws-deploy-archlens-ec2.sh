@@ -82,6 +82,23 @@ else
   if ! grep -q '^ARCHLENS_ENFORCE_QUOTAS=' "$ENV_FILE"; then
     echo "ARCHLENS_ENFORCE_QUOTAS=false" >> "$ENV_FILE"
   fi
+  if grep -q '^OPENAI_API_KEY=.\+' "$ENV_FILE" 2>/dev/null; then
+    if ! grep -q '^ARCHLENS_LLM_PROVIDER=openai' "$ENV_FILE"; then
+      if grep -q '^ARCHLENS_LLM_PROVIDER=' "$ENV_FILE"; then
+        sed -i 's/^ARCHLENS_LLM_PROVIDER=.*/ARCHLENS_LLM_PROVIDER=openai/' "$ENV_FILE"
+      else
+        echo "ARCHLENS_LLM_PROVIDER=openai" >> "$ENV_FILE"
+      fi
+    fi
+    if ! grep -q '^EMBEDDING_PROVIDER=openai' "$ENV_FILE"; then
+      if grep -q '^EMBEDDING_PROVIDER=' "$ENV_FILE"; then
+        sed -i 's/^EMBEDDING_PROVIDER=.*/EMBEDDING_PROVIDER=openai/' "$ENV_FILE"
+      else
+        echo "EMBEDDING_PROVIDER=openai" >> "$ENV_FILE"
+      fi
+    fi
+    echo "▸ OPENAI_API_KEY detectada — LLM/RAG em modo openai"
+  fi
 fi
 
 echo "▸ Gerando realm Keycloak para $BASE_URL"
