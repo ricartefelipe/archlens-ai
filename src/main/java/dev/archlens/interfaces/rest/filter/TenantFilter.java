@@ -34,6 +34,12 @@ public class TenantFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
+        String path = normalizePath(requestContext.getUriInfo().getPath());
+        String requestPath = requestContext.getUriInfo().getRequestUri().getPath();
+        if (path.startsWith("public/auth") || (requestPath != null && requestPath.contains("/public/auth/"))) {
+            return;
+        }
+
         String tenantId = extractTenantFromJwt(requestContext);
 
         if (tenantId == null || tenantId.isBlank()) {
@@ -57,6 +63,13 @@ public class TenantFilter implements ContainerRequestFilter {
 
         tenantProvider.setTenantId(tenantId);
         MDC.put("tenantId", tenantId);
+    }
+
+    private static String normalizePath(String path) {
+        if (path == null) {
+            return "";
+        }
+        return path.startsWith("/") ? path.substring(1) : path;
     }
 
     private String extractTenantFromJwt(ContainerRequestContext requestContext) {

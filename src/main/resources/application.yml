@@ -30,7 +30,7 @@ quarkus:
       proactive: false
       permission:
         auth-public:
-          paths: /v1/auth/login
+          paths: /public/*
           policy: permit
         health:
           paths: /q/*

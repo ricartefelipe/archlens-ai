@@ -56,7 +56,7 @@ export function isProductionAuth(): boolean {
 export async function loginWithPassword(email: string, password: string): Promise<void> {
   const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-  const res = await fetch(`${apiBase}/v1/auth/login`, {
+  const res = await fetch(`${apiBase}/public/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: email.trim(), password }),
