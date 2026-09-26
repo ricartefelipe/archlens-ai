@@ -1,15 +1,8 @@
-# ArchLens
+# ArchLens AI
 
-Plataforma multi-tenant para análise arquitetural: combina consulta contextual sobre documentos indexados, análise estática de artefatos (código, OpenAPI, migrations, Docker, pipelines) e relatórios com evidências rastreáveis.
+Plataforma para diagnóstico arquitetural e apoio à modernização de aplicações.
 
-**Código:** [github.com/ricartefelipe/archlens-ai](https://github.com/ricartefelipe/archlens-ai)
-
-## Fluxo Git (Git Flow)
-
-- **`develop`**: integração contínua. Alterações chegam por **pull request** a partir de `feature/*`, `release/*` ou `hotfix/*`. Evita-se push direto nestes ramos protegidos.
-- **`main`**: estado estável, espelho de **`develop`** após cada entrega (exceto período pontual em que um `release/*` esteja em curso). Atualização apenas por **pull request**.
-- **Releases**: após merge em **`main`**, cria-se tag semântica `vMAJOR.MINOR.PATCH` nesse ramo; o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml) volta a executar os mesmos gates do CI e publica uma **GitHub Release** com notas automáticas derivadas dos PRs.
-- **`feature/*`**, **`hotfix/*`** e **`release/*`** eliminados no remoto depois do merge (`git push origin --delete <ramo>`), para manter o repositório enxuto.
+O ArchLens combina análise estática de código e artefatos técnicos, consulta contextual sobre documentação e geração de relatórios com evidências rastreáveis. Código, contratos OpenAPI, migrations, Dockerfiles e pipelines entram na análise para dar contexto às conclusões e reduzir recomendações baseadas apenas em suposição.
 
 ## Stack
 
@@ -27,20 +20,28 @@ Plataforma multi-tenant para análise arquitetural: combina consulta contextual 
 
 Estrutura em camadas (**domínio → aplicação → infraestrutura → interfaces**), com portas (hexagonal) para persistência, inferência textual remota opcional, armazenamento de vetores de documentos e integrações externas.
 
-```
+```text
 dev.archlens/
 ├── domain/              # Modelos e exceções
-├── application/       # Casos de uso e portas (in/out)
-├── infrastructure/     # JPA, mensageria, clientes HTTP
-└── interfaces/rest/    # JAX-RS, DTOs, filtros
+├── application/         # Casos de uso e portas (in/out)
+├── infrastructure/      # JPA, mensageria, clientes HTTP
+└── interfaces/rest/     # JAX-RS, DTOs, filtros
 ```
 
-Os gateways de inferência e de vetores em modo local usam implementações em memória adequadas a desenvolvimento; em produção substituem-se por adaptadores configuráveis (`archlens.llm.*` e provedores do worker em `worker-ai`) sem alterar o núcleo de domínio.
+Os gateways de inferência e de vetores em modo local usam implementações em memória adequadas a desenvolvimento. Em produção, podem ser substituídos por adaptadores configuráveis (`archlens.llm.*` e provedores do worker em `worker-ai`) sem alterar o núcleo de domínio.
+
+## Fluxo Git
+
+- **`develop`**: integração contínua. Alterações chegam por **pull request** a partir de `feature/*`, `release/*` ou `hotfix/*`.
+- **`main`**: estado estável, atualizado por **pull request** após as entregas.
+- **Releases**: após merge em `main`, uma tag semântica `vMAJOR.MINOR.PATCH` dispara o workflow [`.github/workflows/release.yml`](.github/workflows/release.yml), que executa novamente os gates do CI e publica a GitHub Release.
+- Ramos `feature/*`, `hotfix/*` e `release/*` são removidos do remoto após o merge.
 
 ## Pré-requisitos
 
-- Java 21+, Maven 3.9+
-- Docker e Docker Compose (infra local)
+- Java 21+
+- Maven 3.9+
+- Docker e Docker Compose
 
 ## Execução
 
@@ -53,15 +54,19 @@ docker compose up -d
 - Swagger UI: `http://localhost:8080/q/swagger-ui`
 - Health: `http://localhost:8080/q/health`
 
-Header opcional: `X-Tenant-Id` (fallback `default`). Respostas incluem `X-Correlation-Id`.
+Header opcional: `X-Tenant-Id` (fallback `default`). As respostas incluem `X-Correlation-Id`.
 
 ### Frontend
 
 ```bash
-cd frontend && npm install && npm run dev
+cd frontend
+npm install
+npm run dev
 ```
 
-Interface: `http://localhost:3000`. Variável opcional: `NEXT_PUBLIC_API_URL` (padrão `http://localhost:8080`).
+Interface: `http://localhost:3000`.
+
+Variável opcional: `NEXT_PUBLIC_API_URL` (padrão `http://localhost:8080`).
 
 ## Exemplos de API
 
@@ -71,73 +76,86 @@ curl -X POST http://localhost:8080/v1/projects \
   -H "X-Tenant-Id: tenant-1" \
   -d '{"name": "exemplo", "description": ""}'
 
-curl http://localhost:8080/v1/projects -H "X-Tenant-Id: tenant-1"
+curl http://localhost:8080/v1/projects \
+  -H "X-Tenant-Id: tenant-1"
 ```
 
-## Inferência em produção (configuração)
+## Inferência em produção
 
-O serviço Quarkus escolhe o adapter de `LlmGateway` via `archlens.llm.provider`:
+O serviço Quarkus escolhe o adapter de `LlmGateway` por meio de `archlens.llm.provider`.
 
 | Valor | Comportamento |
-|--------|----------------|
-| `local` (padrão dev) | Respostas determinísticas (`LocalLlmGateway`), sem chamadas HTTP. |
-| `openai` | Completions de chat na URL e credenciais definidas por `ARCHLENS_LLM_OPENAI_*`. Sem chave válida, regressão automática para `local` com aviso em log. |
-| `ollama` | `/api/chat` no servidor indicado por `ARCHLENS_LLM_OLLAMA_*`. |
+|--------|---------------|
+| `local` | Respostas determinísticas com `LocalLlmGateway`, sem chamadas HTTP |
+| `openai` | Completions na URL e credenciais definidas por `ARCHLENS_LLM_OPENAI_*`; sem chave válida, ocorre fallback para `local` com aviso em log |
+| `ollama` | Usa `/api/chat` no servidor definido por `ARCHLENS_LLM_OLLAMA_*` |
 
-Variáveis úteis:
+Variáveis principais:
 
 - `ARCHLENS_LLM_PROVIDER` — `local` \| `openai` \| `ollama`
-- `ARCHLENS_LLM_OPENAI_API_KEY` — obrigatória se `provider=openai`
-- `ARCHLENS_LLM_OPENAI_BASE_URL` — URL base HTTPS do endpoint de completions compatível com o cliente embutido
-- `ARCHLENS_LLM_OPENAI_MODEL` — nome do modelo no endpoint configurado (`application.yml`/env)
-- `ARCHLENS_LLM_OLLAMA_BASE_URL`, `ARCHLENS_LLM_OLLAMA_MODEL`
+- `ARCHLENS_LLM_OPENAI_API_KEY`
+- `ARCHLENS_LLM_OPENAI_BASE_URL`
+- `ARCHLENS_LLM_OPENAI_MODEL`
+- `ARCHLENS_LLM_OLLAMA_BASE_URL`
+- `ARCHLENS_LLM_OLLAMA_MODEL`
 
-Perfil **`prod`**: `application.yml` lê datasource, OIDC, CORS e URL do worker-ai a partir de variáveis (`QUARKUS_DATASOURCE_*`, `OIDC_AUTH_SERVER_URL`, `CORS_ORIGINS`, `WORKER_AI_BASE_URL`).
+No perfil `prod`, o `application.yml` recebe datasource, OIDC, CORS e URL do worker por variáveis de ambiente:
 
-O **worker Python** continua a usar `EMBEDDING_PROVIDER` (`local`, `openai`, `ollama`) em `worker-ai` — alinhar sempre a dimensão do modelo escolhido com a coluna `vector(N)` na base (valor de referência padrão: 1536).
+- `QUARKUS_DATASOURCE_*`
+- `OIDC_AUTH_SERVER_URL`
+- `CORS_ORIGINS`
+- `WORKER_AI_BASE_URL`
 
-### Vetores na base: dimensão = contrato com o PostgreSQL
+O worker Python utiliza `EMBEDDING_PROVIDER` (`local`, `openai` ou `ollama`) em `worker-ai`. A dimensão do modelo deve permanecer alinhada à coluna `vector(N)` no PostgreSQL.
 
-A coluna `document_chunks.embedding` é `vector(N)` na migration `001` com **N = 1536** por defeito.  
-O **worker** e o **backend** (para `LocalEmbeddingGateway`) usam a mesma referência:
+### Vetores no PostgreSQL
+
+A coluna `document_chunks.embedding` é criada como `vector(N)` na migration `001`, com **N = 1536** por padrão.
 
 | Onde | Variável |
-|------|-----------|
+|------|----------|
 | Worker | `EMBEDDING_DIMENSION` ou `ARCHLENS_EMBEDDING_DIMENSION` |
 | Backend Quarkus | `ARCHLENS_EMBEDDING_DIMENSION` → `archlens.embedding.dimension` |
-| Liquibase / BD | `vector(1536)` em `001` — alterar só com migration/migração deliberada |
+| Liquibase / banco | `vector(1536)` em `001` |
 
-Ao arranque, o worker faz (por defeito) um **probe**: materializa um vector de exemplo e falha se `len(vetor) ≠ EMBEDDING_DIMENSION`. Para desligar em dev: `EMBEDDING_DIMENSION_VERIFY=false`.
+Na inicialização, o worker executa por padrão uma verificação da dimensão do vetor. Se `len(vetor) != EMBEDDING_DIMENSION`, a aplicação falha cedo em vez de persistir vetores incompatíveis.
 
-**Identificadores de modelo frequentes vs. dimensão (referência operacional):**
+Para desativar essa verificação em desenvolvimento:
 
-| Identificador | Dimensão típica |
-|------------------|------------------|
-| Provedor `openai`: `text-embedding-3-small` | 1536 |
-| Provedor `openai`: `text-embedding-3-large` | 3072 |
-| Provedor `ollama`: `nomic-embed-text` | 768 |
+```bash
+EMBEDDING_DIMENSION_VERIFY=false
+```
 
-**Mudar de dimensão em base existente:** requer `ALTER TABLE ... TYPE vector(N)` (com plano de **re-ingestão** ou vectores já persistidos tornam-se inválidos) — não faz parte das migrations automáticas; faz backup antes.
+Referência operacional:
 
-## Integração contínua (GitHub Actions)
+| Modelo | Dimensão típica |
+|--------|-----------------|
+| `text-embedding-3-small` | 1536 |
+| `text-embedding-3-large` | 3072 |
+| `nomic-embed-text` | 768 |
+
+Alterar a dimensão em uma base existente exige uma migration deliberada para `vector(N)` e um plano de reingestão dos documentos já vetorizados.
+
+## Integração contínua
 
 No **push** ou **pull request** para `main` e `develop`, [`.github/workflows/ci.yml`](.github/workflows/ci.yml) executa três jobs em paralelo:
 
-- **Backend**: Java 21 (Eclipse Temurin), cache Maven, `./mvnw -B clean verify -DskipITs=true`
-- **Frontend**: Node 22, `npm ci`, `npm run lint`, `npm run build` (com `NEXT_TELEMETRY_DISABLED=1`)
-- **worker-ai**: Python 3.12, `pip install -r requirements.txt`, `compileall` no pacote `app`, import de `app.main`
+- **Backend**: Java 21 (Eclipse Temurin), cache Maven e `./mvnw -B clean verify -DskipITs=true`
+- **Frontend**: Node 22, `npm ci`, `npm run lint` e `npm run build`
+- **worker-ai**: Python 3.12, instalação das dependências, `compileall` e validação de import do `app.main`
 
-## Decisões de arquitetura (resumo)
+## Decisões de arquitetura
 
-1. **Portas para inferência e vetores**: `LlmGateway` com implementação local por defeito; adaptadores remotos via `archlens.llm.*` (`provider` `openai` ou `ollama`). `EmbeddingGateway` no JVM permanece local; a materialização de vetores no fluxo de recuperação trata-se no worker.
-2. **Multi-tenancy**: coluna `tenant_id`; em produção o tenant pode vir do token OIDC.
-3. **Schema**: Liquibase em YAML; Hibernate em modo validação alinhado ao Liquibase.
+1. **Portas para inferência e vetores**  
+   `LlmGateway` possui implementação local por padrão e adaptadores remotos configuráveis. O núcleo da aplicação não depende diretamente do provedor.
 
-## Licença
+2. **Multi-tenancy**  
+   O isolamento é feito por `tenant_id`. Em produção, o tenant pode ser derivado do token OIDC.
 
-Projeto de portfólio. Todos os direitos reservados.
+3. **Schema**  
+   O banco é versionado com Liquibase. O Hibernate opera em modo de validação para evitar divergência entre entidades e migrations.
 
-## Documentação comercial e operacional
+## Documentação
 
 - [Avaliação ponta a ponta](docs/AVALIACAO-PONTA-A-PONTA.md)
 - [README comercial](docs/README-COMERCIAL.md)
@@ -145,3 +163,7 @@ Projeto de portfólio. Todos os direitos reservados.
 - [Template de relatório](docs/TEMPLATE-RELATORIO-DIAGNOSTICO.md)
 - [Roadmap](docs/ROADMAP-PRODUTO.md)
 - [Checklist de entrega](docs/ENTREGA-COMPLETA.md)
+
+## Licença
+
+Projeto de portfólio. Todos os direitos reservados.
