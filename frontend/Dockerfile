@@ -3,7 +3,7 @@
 #   docker pull node:22-alpine && \
 #     docker inspect node:22-alpine --format '{{index .RepoDigests 0}}'
 # Fixar digest não corrige CVE: reconstrua a imagem após atualizar o digest.
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS build
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS build
 WORKDIR /app
 
 ARG NEXT_PUBLIC_API_URL=http://localhost:8080
@@ -40,7 +40,7 @@ RUN mkdir -p public
 COPY . .
 RUN npm run build
 
-FROM node:22-alpine@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914
+FROM node:26-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797
 WORKDIR /app
 
 ENV NODE_ENV=production
