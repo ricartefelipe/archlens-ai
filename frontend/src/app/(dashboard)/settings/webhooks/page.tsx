@@ -6,6 +6,7 @@ import { Loader2, Plus, Trash2, Webhook } from 'lucide-react';
 import { createWebhook, deleteWebhook, listWebhooks } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { hasWriteAccess } from '@/lib/roles';
+import { useClientValue } from '@/lib/use-client-value';
 import type { TenantWebhook } from '@/lib/types';
 
 const DEFAULT_EVENT = 'analysis.completed';
@@ -14,7 +15,7 @@ export default function WebhooksSettingsPage() {
   const [webhooks, setWebhooks] = useState<TenantWebhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [canWrite, setCanWrite] = useState(false);
+  const canWrite = useClientValue(hasWriteAccess, false);
   const [showForm, setShowForm] = useState(false);
   const [url, setUrl] = useState('');
   const [creating, setCreating] = useState(false);
@@ -31,7 +32,6 @@ export default function WebhooksSettingsPage() {
   }, []);
 
   useEffect(() => {
-    setCanWrite(hasWriteAccess());
     const timer = window.setTimeout(() => {
       void loadWebhooks();
     }, 0);

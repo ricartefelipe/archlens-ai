@@ -6,6 +6,7 @@ import { Loader2, Mail, UserMinus } from 'lucide-react';
 import { createOrgInvite, listOrgInvites, listOrgMembers, removeOrgMember } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { hasWriteAccess } from '@/lib/roles';
+import { useClientValue } from '@/lib/use-client-value';
 import type { OrgInvite, OrgMember, OrgMemberRole } from '@/lib/types';
 
 const ROLE_LABELS: Record<OrgMemberRole, string> = {
@@ -19,7 +20,7 @@ export default function TeamSettingsPage() {
   const [invites, setInvites] = useState<OrgInvite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [canWrite, setCanWrite] = useState(false);
+  const canWrite = useClientValue(hasWriteAccess, false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<OrgMemberRole>('ORG_MEMBER');
   const [inviting, setInviting] = useState(false);
@@ -43,7 +44,6 @@ export default function TeamSettingsPage() {
   }, []);
 
   useEffect(() => {
-    setCanWrite(hasWriteAccess());
     const timer = window.setTimeout(() => {
       void loadData();
     }, 0);

@@ -143,6 +143,10 @@ rabbitmq-password: ${RABBITMQ_PASSWORD:archlens}
 archlens:
   llm:
     provider: ${ARCHLENS_LLM_PROVIDER:local}
+    # Permite, apenas em modo demo explícito, iniciar produção com gateway
+    # simulado alimentando o fallback. Padrão falso: produção recusa saída
+    # simulada apresentada como análise real.
+    allow-simulated-demo: ${ARCHLENS_LLM_ALLOW_SIMULATED_DEMO:false}
     openai:
       api-key: ${ARCHLENS_LLM_OPENAI_API_KEY:}
       base-url: ${ARCHLENS_LLM_OPENAI_BASE_URL:https://api.openai.com}
@@ -200,7 +204,10 @@ mp:
 "%prod":
   archlens:
     analysis:
-      llm-fallback-enabled: false
+      # Mesma variável do perfil padrão: fixar `false` aqui tornava
+      # ARCHLENS_ANALYSIS_LLM_FALLBACK inócua em produção e deixava o guard de
+      # inicialização sem efeito. O padrão continua desligado.
+      llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:false}
     rls:
       enabled: true
   quarkus:

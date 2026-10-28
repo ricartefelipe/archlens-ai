@@ -1,18 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { LogOut, User } from 'lucide-react';
 import { getTenantId, getUserEmail, logout } from '@/lib/auth';
+import { useClientValue } from '@/lib/use-client-value';
 
 export function UserSessionBar() {
   const router = useRouter();
-  const [email, setEmail] = useState<string | null>(null);
+  const email = useClientValue(getUserEmail, null);
   const tenantId = getTenantId();
-
-  useEffect(() => {
-    setEmail(getUserEmail());
-  }, []);
 
   function handleLogout() {
     logout();

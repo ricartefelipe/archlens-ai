@@ -16,15 +16,19 @@ function CompareContent() {
   const baseline = searchParams.get('baseline');
   const current = searchParams.get('current');
 
+  // Parâmetros ausentes são um estado derivado da URL, não um efeito.
+  const hasParams = Boolean(baseline && current);
+  const paramsError = hasParams ? null : 'Selecione duas análises concluídas para comparar.';
+
   const [comparison, setComparison] = useState<AnalysisComparison | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<'markdown' | 'json' | 'pdf' | null>(null);
 
+  const error = paramsError ?? fetchError;
+
   useEffect(() => {
     if (!baseline || !current) {
-      setError('Selecione duas análises concluídas para comparar.');
-      setLoading(false);
       return;
     }
 
@@ -33,12 +37,12 @@ function CompareContent() {
       .then((data) => {
         if (!cancelled) {
           setComparison(data);
-          setError(null);
+          setFetchError(null);
         }
       })
       .catch((err: Error) => {
         if (!cancelled) {
-          setError(err.message);
+          setFetchError(err.message);
         }
       })
       .finally(() => {
@@ -52,7 +56,7 @@ function CompareContent() {
     };
   }, [projectId, baseline, current]);
 
-  if (loading) {
+  if (loading && hasParams) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-8 h-8 text-primary animate-spin" />

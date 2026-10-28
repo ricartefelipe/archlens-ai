@@ -15,12 +15,18 @@ public class LocalLlmGateway implements LlmGateway {
     private static final Logger LOG = Logger.getLogger(LocalLlmGateway.class);
 
     @Override
+    public boolean performsExternalInference() {
+        return false;
+    }
+
+    @Override
     public LlmAnalysisResult analyzeProject(String projectContext) {
         LOG.debug("LocalLlmGateway: análise simulada para desenvolvimento local");
 
-        String summary = "Análise arquitetural do projeto concluída. Foram identificados riscos relacionados "
-                + "a observabilidade, acoplamento e separação de camadas. Recomenda-se revisão dos pontos "
-                + "críticos listados.";
+        String summary = "[Análise local sem inferência de modelo externo] Resultado padrão de "
+                + "desenvolvimento/demonstração — não representa inferência de um provedor de IA real. "
+                + "Os apontamentos abaixo são exemplos genéricos e devem ser confirmados pela análise "
+                + "estática determinística ou por um provedor configurado.";
 
         List<LlmRiskFinding> findings = List.of(
                 new LlmRiskFinding(
