@@ -6,13 +6,14 @@ import { Key, Loader2, Plus, Trash2 } from 'lucide-react';
 import { createApiKey, listApiKeys, revokeApiKey } from '@/lib/api';
 import { getTenantId } from '@/lib/auth';
 import { hasWriteAccess } from '@/lib/roles';
+import { useClientValue } from '@/lib/use-client-value';
 import type { ApiKey } from '@/lib/types';
 
 export default function ApiKeysSettingsPage() {
   const [keys, setKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [canWrite, setCanWrite] = useState(false);
+  const canWrite = useClientValue(hasWriteAccess, false);
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState('');
   const [creating, setCreating] = useState(false);
@@ -30,7 +31,6 @@ export default function ApiKeysSettingsPage() {
   }, []);
 
   useEffect(() => {
-    setCanWrite(hasWriteAccess());
     const timer = window.setTimeout(() => {
       void loadKeys();
     }, 0);

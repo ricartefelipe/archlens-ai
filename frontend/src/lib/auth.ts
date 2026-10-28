@@ -148,5 +148,7 @@ export async function loginWithPassword(email: string, password: string): Promis
 
 export function redirectToLogin(): void {
   logout();
-  window.location.href = '/login';
+  // Navegação completa intencional: sessão expirou, o reload limpa todo o
+  // estado em memória. replace evita manter a página expirada no histórico.
+  window.location.replace('/login');
 }
