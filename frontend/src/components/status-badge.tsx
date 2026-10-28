@@ -17,6 +17,7 @@ const statusColors: Record<string, string> = {
   ACCEPTED: 'bg-green-500/20 text-green-400',
   DEPRECATED: 'bg-zinc-500/20 text-zinc-400',
   SUPERSEDED: 'bg-orange-500/20 text-orange-400',
+  CANCELLED: 'bg-zinc-500/20 text-zinc-400',
 };
 
 interface StatusBadgeProps {
