@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import dev.archlens.application.port.in.CreateProjectUseCase;
+import dev.archlens.application.port.in.DeleteProjectUseCase;
 import dev.archlens.application.port.in.GetProjectUseCase;
 import dev.archlens.application.port.in.ListProjectsUseCase;
 import dev.archlens.domain.model.Project;
@@ -32,16 +33,19 @@ public class ProjectResource {
     private final CreateProjectUseCase createUseCase;
     private final ListProjectsUseCase listUseCase;
     private final GetProjectUseCase getUseCase;
+    private final DeleteProjectUseCase deleteUseCase;
     private final ProjectDtoMapper mapper;
 
     @Inject
     public ProjectResource(CreateProjectUseCase createUseCase,
                            ListProjectsUseCase listUseCase,
                            GetProjectUseCase getUseCase,
+                           DeleteProjectUseCase deleteUseCase,
                            ProjectDtoMapper mapper) {
         this.createUseCase = createUseCase;
         this.listUseCase = listUseCase;
         this.getUseCase = getUseCase;
+        this.deleteUseCase = deleteUseCase;
         this.mapper = mapper;
     }
 
@@ -64,5 +68,15 @@ public class ProjectResource {
     public ProjectResponse getById(@PathParam("projectId") UUID projectId) {
         LOG.infof("Fetching project: id=%s", projectId);
         return mapper.toResponse(getUseCase.getById(projectId));
+    }
+
+    @jakarta.ws.rs.DELETE
+    @Path("/{projectId}")
+    // Sem corpo: exigir Content-Type faria um cliente simples receber 415.
+    @Consumes(MediaType.WILDCARD)
+    public Response delete(@PathParam("projectId") UUID projectId) {
+        LOG.infof("Deleting project and all its data: id=%s", projectId);
+        deleteUseCase.delete(projectId);
+        return Response.noContent().build();
     }
 }

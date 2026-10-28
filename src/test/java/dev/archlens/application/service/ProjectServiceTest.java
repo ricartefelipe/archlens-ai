@@ -26,6 +26,8 @@ class ProjectServiceTest {
     private InMemoryProjectRepository repository;
     private FixedTenantProvider tenantProvider;
     private QuotaService quotaService;
+    private RecordingIngestGateway ingestGateway;
+    private RecordingFileStorage fileStorage;
     private ProjectService service;
 
     @BeforeEach
@@ -33,7 +35,9 @@ class ProjectServiceTest {
         repository = new InMemoryProjectRepository();
         tenantProvider = new FixedTenantProvider("tenant-1");
         quotaService = new QuotaService(new InMemoryTenantAccountRepository(), repository, false);
-        service = new ProjectService(repository, tenantProvider, quotaService);
+        ingestGateway = new RecordingIngestGateway();
+        fileStorage = new RecordingFileStorage();
+        service = new ProjectService(repository, tenantProvider, quotaService, ingestGateway, fileStorage);
     }
 
     @Test
@@ -102,6 +106,84 @@ class ProjectServiceTest {
         }
     }
 
+    @Test
+    @DisplayName("delete apaga índice no worker, storage e registro, nessa ordem")
+    void deleteErasesWorkerStorageAndRecord() {
+        Project project = service.create("apagavel", null);
+
+        service.delete(project.getId());
+
+        assertEquals(List.of(project.getId()), ingestGateway.deleted, "chunks/vetores do worker primeiro");
+        assertEquals(List.of(project.getId()), fileStorage.deleted, "arquivos extraídos em seguida");
+        assertTrue(repository.findById(project.getId()).isEmpty(), "registro removido por último");
+    }
+
+    @Test
+    @DisplayName("delete de projeto de outro tenant falha sem tocar em nada")
+    void deleteFromAnotherTenantFailsWithoutSideEffects() {
+        Project project = service.create("de-outro", null);
+        tenantProvider.tenantId = "tenant-2";
+
+        assertThrows(ProjectNotFoundException.class, () -> service.delete(project.getId()));
+        assertTrue(ingestGateway.deleted.isEmpty());
+        assertTrue(fileStorage.deleted.isEmpty());
+        assertTrue(repository.findById(project.getId()).isPresent());
+    }
+
+    @Test
+    @DisplayName("falha no worker aborta o delete antes de apagar storage e registro")
+    void workerFailureAbortsDeletion() {
+        Project project = service.create("meio-apagado-nao", null);
+        ingestGateway.failNext = true;
+
+        assertThrows(RuntimeException.class, () -> service.delete(project.getId()));
+        assertTrue(fileStorage.deleted.isEmpty(), "storage não pode ser tocado se o worker falhou");
+        assertTrue(repository.findById(project.getId()).isPresent(), "registro preservado para repetir");
+    }
+
+    private static final class RecordingIngestGateway implements dev.archlens.application.port.out.IngestGateway {
+        private final List<UUID> deleted = new ArrayList<>();
+        private boolean failNext;
+
+        @Override
+        public IngestJobStatus triggerIngest(UUID projectId, String tenantId, List<String> filePaths) {
+            return new IngestJobStatus(projectId, "COMPLETED", filePaths.size(), filePaths.size(), 0);
+        }
+
+        @Override
+        public IngestJobStatus getStatus(UUID projectId) {
+            return new IngestJobStatus(projectId, "COMPLETED", 0, 0, 0);
+        }
+
+        @Override
+        public void deleteProjectData(UUID projectId) {
+            if (failNext) {
+                failNext = false;
+                throw new RuntimeException("worker indisponível");
+            }
+            deleted.add(projectId);
+        }
+    }
+
+    private static final class RecordingFileStorage implements dev.archlens.application.port.out.FileStoragePort {
+        private final List<UUID> deleted = new ArrayList<>();
+
+        @Override
+        public java.nio.file.Path storeZip(UUID projectId, String fileName, java.io.InputStream zipStream) {
+            return java.nio.file.Path.of("/tmp", fileName);
+        }
+
+        @Override
+        public java.nio.file.Path getProjectDirectory(UUID projectId) {
+            return java.nio.file.Path.of("/tmp", projectId.toString());
+        }
+
+        @Override
+        public void deleteProjectFiles(UUID projectId) {
+            deleted.add(projectId);
+        }
+    }
+
     private static final class InMemoryProjectRepository implements ProjectRepositoryPort {
         private final List<Project> store = new ArrayList<>();
 
@@ -137,6 +219,11 @@ class ProjectServiceTest {
         @Override
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return store.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
+        }
+
+        @Override
+        public void deleteById(UUID id) {
+            store.removeIf(p -> p.getId().equals(id));
         }
     }
 
