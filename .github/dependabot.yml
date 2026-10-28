@@ -34,3 +34,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+
+  # Imagens base dos Dockerfiles. As bases são fixadas por digest para que o
+  # build seja reproduzível; sem estas entradas, um digest fixo deixaria de
+  # receber correções de segurança da base.
+  - package-ecosystem: docker
+    directories:
+      - /
+      - /frontend
+      - /worker-ai
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
