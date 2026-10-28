@@ -23,7 +23,10 @@ test.describe('Comparativo ArchLens', () => {
     );
 
     await expect(page.getByRole('heading', { name: 'Comparativo antes/depois' })).toBeVisible();
-    // Sem backend no E2E, a comparação falha na API — validamos que a página tenta carregar.
-    await expect(page.getByText(/Failed to fetch|Selecione duas análises/i)).toBeVisible();
+    // Sem backend no E2E, a comparação falha na API (erro de rede ou resposta
+    // de erro) — validamos que a página tenta carregar e exibe o estado de erro.
+    await expect(
+      page.getByText(/API \d{3}|Failed to fetch|Selecione duas análises/i)
+    ).toBeVisible();
   });
 });

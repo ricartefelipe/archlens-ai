@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/', '/login', '/auth/callback'];
+// Prefixos públicos (casam o caminho e seus sub-caminhos).
+const PUBLIC_PREFIXES = ['/login', '/auth/callback'];
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (PUBLIC_PATHS.some((path) => pathname.startsWith(path))) {
+  // A raiz "/" é pública apenas como correspondência exata; usar startsWith('/')
+  // tornaria todas as rotas públicas e desativaria a proteção.
+  if (pathname === '/' || PUBLIC_PREFIXES.some((path) => pathname.startsWith(path))) {
     return NextResponse.next();
   }
 
