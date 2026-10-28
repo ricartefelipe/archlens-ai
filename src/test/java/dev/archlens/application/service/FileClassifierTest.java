@@ -83,4 +83,40 @@ class FileClassifierTest {
                 () -> assertTrue(classifier.isRelevant("cmd/api/main.go")),
                 () -> assertTrue(classifier.isRelevant("pom.xml")));
     }
+
+    @Test
+    @DisplayName("exclui arquivos de credencial da extração e da indexação")
+    void excludesSensitiveFiles() {
+        assertAll(
+                () -> assertTrue(classifier.isSensitive("env/prod.tfvars")),
+                () -> assertTrue(classifier.isSensitive("terraform.tfstate")),
+                () -> assertTrue(classifier.isSensitive(".env")),
+                () -> assertTrue(classifier.isSensitive(".env.production")),
+                () -> assertTrue(classifier.isSensitive("config/credentials.json")),
+                () -> assertTrue(classifier.isSensitive("k8s/db-secret.yaml")),
+                () -> assertTrue(classifier.isSensitive("infra/secrets.yml")),
+                () -> assertTrue(classifier.isSensitive("certs/server.key")),
+                () -> assertTrue(classifier.isSensitive("certs/server.pem")),
+                () -> assertTrue(classifier.isSensitive("keystore.jks")),
+                () -> assertTrue(classifier.isSensitive("home/.ssh/id_rsa")),
+                () -> assertTrue(classifier.isSensitive(".npmrc")),
+                // isRelevant precisa refletir a exclusão: é o filtro do upload.
+                () -> assertFalse(classifier.isRelevant("env/prod.tfvars")),
+                () -> assertFalse(classifier.isRelevant("config/credentials.json")),
+                () -> assertFalse(classifier.isRelevant("infra/secrets.yml")));
+    }
+
+    @Test
+    @DisplayName("preserva análise de configuração legítima, onde segredo embutido é risco")
+    void keepsLegitimateConfiguration() {
+        assertAll(
+                () -> assertFalse(classifier.isSensitive("src/main/resources/application.properties")),
+                () -> assertTrue(classifier.isRelevant("src/main/resources/application.properties")),
+                () -> assertFalse(classifier.isSensitive("infra/main.tf")),
+                () -> assertTrue(classifier.isRelevant("infra/main.tf")),
+                () -> assertFalse(classifier.isSensitive("docker-compose.yml")),
+                () -> assertTrue(classifier.isRelevant("docker-compose.yml")),
+                () -> assertFalse(classifier.isSensitive("k8s/deployment.yaml")),
+                () -> assertTrue(classifier.isRelevant("k8s/deployment.yaml")));
+    }
 }
