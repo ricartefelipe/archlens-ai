@@ -219,9 +219,10 @@ autenticação Keycloak, upload sintético, análise, comparação e exportaçã
 
 ### Pendências registradas (P2)
 
-- Plano comercial inválido em `PUT /v1/admin/tenants/{id}/plan` responde 500; deveria ser 400.
-- `POST /v1/ingest/{id}` apaga os chunks antes de validar a lista: uma chamada com
-  caminhos inválidos zera o índice do projeto (worker não é exposto publicamente).
+As duas primeiras foram resolvidas na sequência — ver §11.
+
+- ~~Plano comercial inválido em `PUT /v1/admin/tenants/{id}/plan` responde 500.~~ Corrigido.
+- ~~`POST /v1/ingest/{id}` apaga os chunks antes de validar a lista.~~ Corrigido.
 - Proveniência persistida da resposta (versão de prompt/modelo/embedding, custo,
   latência) exige migration própria; hoje fica em log e no texto da resposta.
 
@@ -292,3 +293,47 @@ Correções aplicadas:
 
 Um scan em amd64 não comprova arm64: ao anunciar outra plataforma, escaneie a
 imagem construída para ela.
+
+
+---
+
+## 11. Erros de cliente e índice preservado — 28/10/2026
+
+Fechamento das pendências P2 abertas em §10, mais um defeito que elas revelaram.
+
+### Exceções de status viravam 500
+
+`GenericExceptionMapper` implementa `ExceptionMapper<Exception>`, que em JAX-RS
+também captura as exceções de status do próprio framework. O resultado: um
+`ForbiddenException` lançado por `AdminTenantResource.updateStatus` chegava ao
+cliente como **500**, indistinguível de falha do servidor, e o mesmo valia para
+qualquer `NotFoundException` ou `BadRequestException` lançada em um resource.
+
+O mapper passou a preservar o status e o corpo das `WebApplicationException`:
+5xx continua com mensagem genérica e log de erro; 4xx devolve o status original
+com a mensagem que o cliente precisa para corrigir a requisição. Coberto por
+`AdminTenantResourceTest`, que assere 403 (não 500) nas três rotas de admin.
+
+### Valor de enum inválido
+
+`CommercialPlan.valueOf(...)` e `TenantAccountStatus.valueOf(...)` lançavam
+`IllegalArgumentException` — erro do cliente apresentado como 500. Agora um
+`parseEnum` comum responde **400** listando os valores aceitos, tolerando
+diferença de caixa e espaços; `@Valid`, que faltava no endpoint de plano,
+rejeita o campo ausente. Coberto por `AdminTenantResourceParseTest`.
+
+### Ingestão apagava o índice antes de validar os caminhos
+
+`IngestService.ingest` chamava `delete_by_project_id` **antes** de descobrir se
+havia algo para indexar. Uma chamada com caminhos inválidos — travessia, arquivo
+inexistente ou apenas arquivos sensíveis — zerava o índice do projeto e não
+reindexava nada. Agora, sem caminho utilizável, o índice é preservado e a
+resposta tem `status: "no_files"` com `total_chunks` informando o que continua
+indexado. Coberto por `test_ingest_preserves_index.py` (3 casos: travessia,
+só arquivos sensíveis, e reindexação legítima que continua trocando o índice).
+
+### Dependabot apontava para `main`
+
+Sem `target-branch`, o Dependabot abre PR contra a branch padrão: havia 18 PRs
+abertos direto em `main`, contornando a integração em `develop` que o README
+define. Todas as entradas passaram a declarar `target-branch: develop`.
