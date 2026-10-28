@@ -80,6 +80,48 @@ curl http://localhost:8080/v1/projects \
   -H "X-Tenant-Id: tenant-1"
 ```
 
+## Limites de ingestão do arquivo
+
+O upload é extraído em área isolada, sem executar nada do pacote. Limites aplicados
+durante a extração (`UploadService`), que recusam o upload com HTTP 413:
+
+| Limite | Valor |
+|--------|-------|
+| Corpo da requisição | 200 MB (`quarkus.http.limits.max-body-size`) |
+| Por arquivo extraído | 50 MB |
+| Total descomprimido | 500 MB |
+| Entradas no arquivo | 20.000 |
+| Razão de expansão | 200:1, verificada acima de 8 MB descomprimidos |
+
+Entradas que tentem escapar do diretório do projeto (ZIP slip) são ignoradas: o
+nome é rejeitado se contiver `..` e o caminho resolvido é validado contra a raiz
+de extração.
+
+**Arquivos de credencial não são extraídos, indexados, vetorizados nem enviados a
+provedor externo** (`FileClassifier.isSensitive`): `.env*`, `*.tfvars`, `*.tfstate`,
+`*.pem`, `*.key`, `*.jks`, `credentials.*`, `secrets.*`, `*-secret.*`, `id_rsa*`,
+`.npmrc`, `.netrc`, `.ssh/`, `.aws/credentials`, entre outros. Configuração legítima
+(`application.properties`, `*.tf`, `docker-compose.yml`, manifests) continua sendo
+analisada — é nela que a análise aponta segredo embutido como risco.
+
+A detecção é por nome/extensão: ela não substitui revisão do pacote enviado nem
+detecta um segredo colado dentro de um arquivo de código.
+
+## Roteamento da API (mesma origem)
+
+A UI chama a API na mesma origem do navegador (`src/lib/api-base.ts`), o que evita
+mistura de http/https e CORS no piloto. Quem encaminha `/v1`, `/public` e `/q` para
+o backend depende do deploy:
+
+| Deploy | Encaminhamento |
+|--------|----------------|
+| `docker-compose.prod.yml` | nginx (`deploy/nginx/conf.d/*.conf`) roteia antes do Next |
+| `docker-compose.yml` (local) e `next dev` | o servidor Next encaminha via `rewrites` para `BACKEND_ORIGIN` |
+
+`BACKEND_ORIGIN` é resolvido no **build** do Next (build arg da imagem; padrão
+`http://localhost:8080`). Essas rotas ficam fora da proteção de páginas do
+`src/proxy.ts` — a autorização delas é feita pelo backend via JWT.
+
 ## Inferência em produção
 
 O serviço Quarkus escolhe o adapter de `LlmGateway` por meio de `archlens.llm.provider`.
@@ -90,9 +132,18 @@ O serviço Quarkus escolhe o adapter de `LlmGateway` por meio de `archlens.llm.p
 | `openai` | Completions na URL e credenciais definidas por `ARCHLENS_LLM_OPENAI_*`; sem chave válida, ocorre fallback para `local` com aviso em log |
 | `ollama` | Usa `/api/chat` no servidor definido por `ARCHLENS_LLM_OLLAMA_*` |
 
+O gateway `local` não realiza inferência de modelo externo e cada conclusão produzida
+por ele é registrada com essa origem no relatório. Em execução de produção (launch
+mode NORMAL), se o fallback de análise (`ARCHLENS_ANALYSIS_LLM_FALLBACK=true`)
+estiver habilitado com um gateway simulado, a aplicação **recusa iniciar**, a menos
+que o modo demo seja habilitado explicitamente com
+`ARCHLENS_LLM_ALLOW_SIMULATED_DEMO=true`. A análise estática determinística do
+worker não é afetada: ela é produto próprio e nunca é apresentada como inferência.
+
 Variáveis principais:
 
 - `ARCHLENS_LLM_PROVIDER` — `local` \| `openai` \| `ollama`
+- `ARCHLENS_LLM_ALLOW_SIMULATED_DEMO` — `true` apenas para demo explícita; padrão `false`
 - `ARCHLENS_LLM_OPENAI_API_KEY`
 - `ARCHLENS_LLM_OPENAI_BASE_URL`
 - `ARCHLENS_LLM_OPENAI_MODEL`

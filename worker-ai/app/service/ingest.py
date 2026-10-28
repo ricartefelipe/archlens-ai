@@ -8,6 +8,7 @@ from app.config import settings
 from app.domain.models import DocumentChunk, IngestStatus
 from app.embedding.gateway import create_embedding_gateway
 from app.persistence.repository import ChunkRepository
+from app.service.file_filter import selectable_paths
 
 log = structlog.get_logger()
 
@@ -25,16 +26,22 @@ class IngestService:
         tenant_id: str,
         file_paths: list[str] | None = None,
     ) -> IngestStatus:
-        base = Path(settings.storage_base_path) / str(project_id)
+        base = (Path(settings.storage_base_path) / str(project_id)).resolve()
         log.info("ingest_start", project_id=str(project_id), base_path=str(base))
 
-        if file_paths:
-            resolved_paths = [base / fp for fp in file_paths]
-        else:
-            resolved_paths = [p for p in base.rglob("*") if p.is_file()]
+        # Os caminhos chegam pela API: precisam ficar contidos no diretório do
+        # projeto (sem travessia para outro tenant) e excluir credenciais.
+        requested = len(file_paths) if file_paths else 0
+        resolved_paths = selectable_paths(base, file_paths)
 
         total_files = len(resolved_paths)
-        log.info("files_discovered", project_id=str(project_id), total=total_files)
+        log.info(
+            "files_discovered",
+            project_id=str(project_id),
+            total=total_files,
+            requested=requested,
+            skipped=max(requested - total_files, 0),
+        )
 
         await self._repository.delete_by_project_id(project_id)
         log.info("old_chunks_deleted", project_id=str(project_id))

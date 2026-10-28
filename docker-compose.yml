@@ -10,6 +10,9 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      # Cria o banco dedicado do Keycloak na primeira inicialização (mesmo
+      # init usado em produção); sem ele, o Keycloak falha em volume novo.
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U archlens"]
       interval: 10s
@@ -37,10 +40,11 @@ services:
       KEYCLOAK_ADMIN: admin
       KEYCLOAK_ADMIN_PASSWORD: admin
       KC_DB: postgres
-      KC_DB_URL: jdbc:postgresql://postgres:5432/archlens
+      # Banco dedicado criado por infra/postgres/init/01-keycloak-db.sh
+      # (paridade com docker-compose.prod.yml).
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
       KC_DB_USERNAME: archlens
       KC_DB_PASSWORD: archlens
-      KC_DB_SCHEMA: keycloak
     ports:
       - "8180:8080"
     volumes:
@@ -128,6 +132,8 @@ services:
         NEXT_PUBLIC_API_URL: http://localhost:8080
         NEXT_PUBLIC_KEYCLOAK_URL: http://localhost:8180
         NEXT_PUBLIC_OIDC_ENABLED: "false"
+        # Sem nginx no Compose local, o servidor Next encaminha /v1, /public e /q.
+        BACKEND_ORIGIN: http://backend:8080
     container_name: archlens-frontend
     ports:
       - "3000:3000"

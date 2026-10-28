@@ -1,10 +1,20 @@
 package dev.archlens.application.service;
 
+import java.util.Set;
+
 import dev.archlens.domain.model.FileType;
 import jakarta.enterprise.context.ApplicationScoped;
 
 @ApplicationScoped
 public class FileClassifier {
+
+    private static final Set<String> SENSITIVE_EXTENSIONS = Set.of(
+            ".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".truststore",
+            ".ppk", ".asc", ".gpg", ".kdbx", ".tfvars", ".tfstate", ".pub");
+
+    private static final Set<String> SENSITIVE_NAMES = Set.of(
+            ".npmrc", ".pypirc", ".netrc", "_netrc", ".htpasswd", ".pgpass",
+            "terraform.tfstate.backup", "credentials", "kubeconfig");
 
     public FileType classify(String filePath) {
         String lower = filePath.toLowerCase();
@@ -61,7 +71,43 @@ public class FileClassifier {
         return FileType.OTHER;
     }
 
+    /**
+     * Arquivos cuja razão de existir é guardar credencial: ficam fora da
+     * extração, do índice, dos embeddings e de qualquer envio a provedor
+     * externo. Configuração legítima (`.properties`, `.yml`, `.tf`) continua
+     * sendo analisada — é lá que a análise procura segredo embutido como risco.
+     */
+    public boolean isSensitive(String filePath) {
+        String lower = filePath.toLowerCase();
+        String fileName = lower.contains("/") ? lower.substring(lower.lastIndexOf('/') + 1) : lower;
+
+        if (lower.contains(".ssh/") || lower.contains(".gnupg/") || lower.contains(".aws/credentials")
+                || lower.contains(".kube/config") || lower.contains(".docker/config.json")) {
+            return true;
+        }
+
+        for (String extension : SENSITIVE_EXTENSIONS) {
+            if (fileName.endsWith(extension)) {
+                return true;
+            }
+        }
+
+        if (SENSITIVE_NAMES.contains(fileName) || fileName.startsWith(".env")
+                || fileName.startsWith("id_rsa") || fileName.startsWith("id_dsa")
+                || fileName.startsWith("id_ecdsa") || fileName.startsWith("id_ed25519")) {
+            return true;
+        }
+
+        // secrets.yml, prod.secrets.json, db-secret.yaml, credentials.json…
+        return fileName.contains("secrets.") || fileName.contains("credentials.")
+                || fileName.startsWith("secret.") || fileName.contains("-secret.")
+                || fileName.contains("_secret.");
+    }
+
     public boolean isRelevant(String filePath) {
+        if (isSensitive(filePath)) {
+            return false;
+        }
         String lower = filePath.toLowerCase();
         if (lower.contains("node_modules/") || lower.contains("target/")
                 || lower.contains("build/") || lower.contains(".git/")

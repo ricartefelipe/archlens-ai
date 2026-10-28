@@ -116,8 +116,10 @@ export default function ProjectDetailPage() {
     return () => clearInterval(interval);
   }, [pollingIds, projectId]);
 
+  const projectBusy = project !== null && isProjectBusy(project);
+
   useEffect(() => {
-    if (!project || !isProjectBusy(project)) {
+    if (!projectBusy) {
       return;
     }
 
@@ -126,7 +128,7 @@ export default function ProjectDetailPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [project?.status, project?.id, loadData]);
+  }, [projectBusy, loadData]);
 
   async function handleUpload(file: File) {
     setUploading(true);

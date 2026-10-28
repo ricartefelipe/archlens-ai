@@ -44,7 +44,7 @@ public class AnalysisConsumer {
     private final LlmGateway llmGateway;
     private final AdrRepositoryPort adrRepository;
 
-    @ConfigProperty(name = "archlens.analysis.llm-fallback-enabled", defaultValue = "true")
+    @ConfigProperty(name = "archlens.analysis.llm-fallback-enabled", defaultValue = "false")
     boolean llmFallbackEnabled;
 
     private final TenantRlsService tenantRlsService;
@@ -96,6 +96,22 @@ public class AnalysisConsumer {
             return;
         }
 
+        // O tenant do evento é revalidado contra o dono da análise: a mensagem
+        // não é fonte de autoridade, mesmo que o RLS esteja desabilitado.
+        if (!tenantMatches(analysis.getTenantId(), event.tenantId())) {
+            LOG.errorf("Evento de análise %s recusado: tenant do evento não corresponde ao da análise",
+                    event.analysisId());
+            return;
+        }
+
+        // Reentrega após conclusão (crash antes do ACK) não pode duplicar
+        // relatório, consumo de quota nem webhook.
+        if (isAlreadySettled(analysis.getStatus())) {
+            LOG.infof("Analysis %s já concluída (%s); mensagem reentregue ignorada",
+                    analysis.getId(), analysis.getStatus());
+            return;
+        }
+
         try {
             analysis.setStatus(AnalysisStatus.PROCESSING);
             analysis.setUpdatedAt(Instant.now());
@@ -142,7 +158,12 @@ public class AnalysisConsumer {
                     risk.setSuggestion(finding.suggestion());
                     risks.add(risk);
                 }
-                analysis.setSummary(fallback.summary());
+                // Registra a origem da conclusão: fallback que não usa inferência
+                // externa não pode ser apresentado como análise de modelo real.
+                String origin = llmGateway.performsExternalInference()
+                        ? "[Origem: inferência de modelo externo]"
+                        : "[Origem: análise local sem inferência de modelo externo]";
+                analysis.setSummary(origin + " " + fallback.summary());
             } else if (risks.isEmpty()) {
                 analysis.setSummary(staticResult.summary() != null
                         ? staticResult.summary()
@@ -173,6 +194,23 @@ public class AnalysisConsumer {
 
             dispatchWebhook(event, analysis, WebhookService.EVENT_ANALYSIS_FAILED);
         }
+    }
+
+    /**
+     * O tenant da mensagem precisa ser exatamente o da análise persistida.
+     * Regra pura para teste direto, sem subir o consumidor.
+     */
+    static boolean tenantMatches(String analysisTenantId, String eventTenantId) {
+        return analysisTenantId != null && analysisTenantId.equals(eventTenantId);
+    }
+
+    /**
+     * Estado em que o resultado já foi entregue: reprocessar duplicaria riscos,
+     * consumo de quota e webhook. {@code FAILED} fica de fora para permitir
+     * retomada depois de falha transitória.
+     */
+    static boolean isAlreadySettled(AnalysisStatus status) {
+        return status == AnalysisStatus.COMPLETED;
     }
 
     private void dispatchWebhook(AnalysisEvent event, Analysis analysis, String webhookEvent) {

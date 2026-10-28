@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { Sidebar } from '@/components/sidebar';
 import { isPlatformAdmin } from '@/lib/roles';
+import { useClientValue } from '@/lib/use-client-value';
 
 export default function AdminShellLayout({
   children,
@@ -12,15 +13,14 @@ export default function AdminShellLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [authorized, setAuthorized] = useState<boolean | null>(null);
+  // null durante SSR/hidratação; booleano real no cliente, sem setState em effect.
+  const authorized = useClientValue<boolean | null>(isPlatformAdmin, null);
 
   useEffect(() => {
-    const allowed = isPlatformAdmin();
-    setAuthorized(allowed);
-    if (!allowed) {
+    if (authorized === false) {
       router.replace('/projects');
     }
-  }, [router]);
+  }, [authorized, router]);
 
   if (authorized === null) {
     return (

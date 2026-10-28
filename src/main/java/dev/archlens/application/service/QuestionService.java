@@ -71,9 +71,23 @@ public class QuestionService implements AskQuestionUseCase, ListQuestionsForAnal
         RagContextPort.RagContext ragContext = ragContextPort.retrieveContext(
                 analysis.getProjectId(), questionText, RAG_MAX_CHUNKS);
 
-        String enrichedContext = buildEnrichedContext(analysis, ragContext);
+        String answer;
+        AnswerGrounding.Verdict verdict;
 
-        String answer = llmGateway.answerQuestion(questionText, enrichedContext);
+        if (AnswerGrounding.classify(ragContext.sources()) == AnswerGrounding.EvidenceLevel.NONE) {
+            // Sem evidência recuperada, abstém-se em vez de responder sem suporte.
+            answer = AnswerGrounding.abstentionAnswer(questionText);
+            verdict = AnswerGrounding.evaluate(answer, ragContext.sources());
+        } else {
+            String enrichedContext = buildEnrichedContext(analysis, ragContext);
+            String raw = llmGateway.answerQuestion(questionText, enrichedContext);
+            verdict = AnswerGrounding.evaluate(raw, ragContext.sources());
+            answer = raw + AnswerGrounding.limitationNote(verdict);
+        }
+
+        LOG.infof("Grounding da pergunta em %s: nível=%s, abstencao=%s, citacoes_sem_suporte=%d, score_max=%.2f",
+                analysisId, verdict.level(), verdict.abstained(),
+                verdict.unsupportedCitations().size(), verdict.topScore());
 
         String sourcesJson = serializeSources(ragContext.sources());
 
@@ -106,6 +120,8 @@ public class QuestionService implements AskQuestionUseCase, ListQuestionsForAnal
 
     private String buildEnrichedContext(Analysis analysis, RagContextPort.RagContext ragContext) {
         StringBuilder sb = new StringBuilder();
+        // Trechos do cliente são dados, não instruções: a demarcação vem antes.
+        sb.append(AnswerGrounding.documentDataPreamble());
         sb.append("=== Resumo da Análise ===\n");
         sb.append(analysis.getSummary() != null ? analysis.getSummary() : "Sem resumo disponível");
         sb.append("\n\n");

@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
 import {
   FolderOpen,
   Settings,
@@ -17,6 +16,7 @@ import { UserSessionBar } from '@/components/user-session-bar';
 import { AppLogo } from '@/components/app-logo';
 import { APP_NAME, SUPPORT_URL } from '@/lib/branding';
 import { isPlatformAdmin } from '@/lib/roles';
+import { useClientValue } from '@/lib/use-client-value';
 
 const mainNavItems = [
   { href: '/projects', label: 'Projetos', icon: FolderOpen },
@@ -63,11 +63,7 @@ function NavLink({
 
 export function Sidebar() {
   const pathname = usePathname();
-  const [platformAdmin, setPlatformAdmin] = useState(false);
-
-  useEffect(() => {
-    setPlatformAdmin(isPlatformAdmin());
-  }, []);
+  const platformAdmin = useClientValue(isPlatformAdmin, false);
 
   const settingsActive = pathname.startsWith('/settings');
   const adminActive = pathname.startsWith('/admin');
