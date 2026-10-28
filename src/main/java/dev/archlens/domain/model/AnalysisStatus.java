@@ -4,5 +4,6 @@ public enum AnalysisStatus {
     PENDING,
     PROCESSING,
     COMPLETED,
-    FAILED
+    FAILED,
+    CANCELLED
 }

@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.UUID;
 
 import dev.archlens.application.port.in.CompareAnalysesUseCase;
+import dev.archlens.application.port.in.CancelAnalysisUseCase;
 import dev.archlens.application.port.in.CreateAnalysisUseCase;
 import dev.archlens.application.port.in.GetAnalysisUseCase;
 import dev.archlens.application.port.in.ListAnalysesForProjectUseCase;
@@ -36,6 +37,7 @@ public class AnalysisResource {
     private final GetAnalysisUseCase getUseCase;
     private final ListAnalysesForProjectUseCase listUseCase;
     private final CompareAnalysesUseCase compareUseCase;
+    private final CancelAnalysisUseCase cancelUseCase;
     private final AnalysisDtoMapper mapper;
     private final ComparisonDtoMapper comparisonMapper;
 
@@ -44,12 +46,14 @@ public class AnalysisResource {
                             GetAnalysisUseCase getUseCase,
                             ListAnalysesForProjectUseCase listUseCase,
                             CompareAnalysesUseCase compareUseCase,
+                            CancelAnalysisUseCase cancelUseCase,
                             AnalysisDtoMapper mapper,
                             ComparisonDtoMapper comparisonMapper) {
         this.createUseCase = createUseCase;
         this.getUseCase = getUseCase;
         this.listUseCase = listUseCase;
         this.compareUseCase = compareUseCase;
+        this.cancelUseCase = cancelUseCase;
         this.mapper = mapper;
         this.comparisonMapper = comparisonMapper;
     }
@@ -63,6 +67,17 @@ public class AnalysisResource {
     }
 
     @POST
+    @Path("/{analysisId}/cancel")
+    // Sem corpo: exigir Content-Type faria um cliente simples receber 415.
+    @Consumes(MediaType.WILDCARD)
+    public AnalysisResponse cancel(@PathParam("projectId") UUID projectId,
+                                   @PathParam("analysisId") UUID analysisId) {
+        LOG.infof("Cancelling analysis %s of project %s", analysisId, projectId);
+        return mapper.toResponse(cancelUseCase.cancel(projectId, analysisId));
+    }
+
+    @POST
+    @Consumes(MediaType.WILDCARD)
     public Response create(@PathParam("projectId") UUID projectId) {
         LOG.infof("Creating analysis for project: projectId=%s", projectId);
         Analysis analysis = createUseCase.create(projectId);

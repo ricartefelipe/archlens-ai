@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.jboss.logging.Logger;
 
+import dev.archlens.application.port.in.CancelAnalysisUseCase;
 import dev.archlens.application.port.in.CreateAnalysisUseCase;
 import dev.archlens.application.port.in.GetAdrsUseCase;
 import dev.archlens.application.port.in.GetAnalysisUseCase;
@@ -14,6 +15,7 @@ import dev.archlens.application.port.out.AdrRepositoryPort;
 import dev.archlens.application.port.out.AnalysisRepositoryPort;
 import dev.archlens.application.port.out.ProjectRepositoryPort;
 import dev.archlens.application.port.out.TenantProvider;
+import dev.archlens.domain.exception.AnalysisNotCancellableException;
 import dev.archlens.domain.exception.AnalysisNotFoundException;
 import dev.archlens.domain.exception.ProjectNotFoundException;
 import dev.archlens.domain.exception.ProjectNotReadyException;
@@ -32,7 +34,7 @@ import jakarta.transaction.Transactional;
 @TenantScopedRls
 @ApplicationScoped
 public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCase, GetAdrsUseCase,
-        ListAnalysesForProjectUseCase {
+        ListAnalysesForProjectUseCase, CancelAnalysisUseCase {
 
     private static final Logger LOG = Logger.getLogger(AnalysisService.class);
 
@@ -101,6 +103,38 @@ public class AnalysisService implements CreateAnalysisUseCase, GetAnalysisUseCas
         return analysisRepository.findByProjectIdAndId(projectId, analysisId)
                 .filter(a -> tenantId.equals(a.getTenantId()))
                 .orElseThrow(() -> new AnalysisNotFoundException(analysisId));
+    }
+
+    /**
+     * Cancela uma análise em andamento. O UPDATE condicional no repositório
+     * decide a corrida com a conclusão: quem commitar primeiro vence, e o
+     * consumidor descarta resultado tardio de análise cancelada. Cancelar o
+     * que já está cancelado é idempotente; estado terminal responde 409.
+     */
+    @Override
+    public Analysis cancel(UUID projectId, UUID analysisId) {
+        Analysis analysis = getById(projectId, analysisId);
+
+        if (analysis.getStatus() == AnalysisStatus.CANCELLED) {
+            return analysis;
+        }
+
+        String summary = "Análise cancelada pelo usuário.";
+        Analysis cancelled = analysisRepository
+                .cancelIfInProgress(analysisId, Instant.now(), summary)
+                .orElse(null);
+
+        if (cancelled == null) {
+            AnalysisStatus current = analysisRepository.findCurrentStatusFresh(analysisId)
+                    .orElse(analysis.getStatus());
+            if (current == AnalysisStatus.CANCELLED) {
+                return analysis;
+            }
+            throw new AnalysisNotCancellableException(analysisId, current);
+        }
+
+        LOG.infof("Analysis %s cancelled by user", analysisId);
+        return cancelled;
     }
 
     @Override

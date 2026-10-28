@@ -23,9 +23,11 @@ class AnalysisConsumerGuardsTest {
     }
 
     @Test
-    @DisplayName("mensagem reentregue de análise concluída é ignorada")
+    @DisplayName("mensagem reentregue de análise concluída ou cancelada é ignorada")
     void ignoresRedeliveryOfCompletedAnalysis() {
         assertTrue(AnalysisConsumer.isAlreadySettled(AnalysisStatus.COMPLETED));
+        // Cancelada também: reprocessar reviveria algo que o usuário parou.
+        assertTrue(AnalysisConsumer.isAlreadySettled(AnalysisStatus.CANCELLED));
     }
 
     @Test
