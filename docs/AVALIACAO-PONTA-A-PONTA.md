@@ -224,3 +224,71 @@ autenticação Keycloak, upload sintético, análise, comparação e exportaçã
   caminhos inválidos zera o índice do projeto (worker não é exposto publicamente).
 - Proveniência persistida da resposta (versão de prompt/modelo/embedding, custo,
   latência) exige migration própria; hoje fica em log e no texto da resposta.
+
+---
+
+## 10. Gates de recuperação e segurança de dependências — 28/10/2026
+
+Gates do C7 executados após o fechamento da release 0.2.0.
+
+### Backup e restore (banco novo, validado pela aplicação)
+
+`pg_dump` da base semeada (448 KB) restaurado em banco **novo e vazio** (`restored`,
+0 tabelas antes), com `ON_ERROR_STOP=1` e zero erros. A validação foi feita pela
+API da aplicação restaurada, com efeitos externos desligados:
+
+| Verificação | Antes | Restaurado |
+|---|---|---|
+| projects / analyses / risks | 1 / 1 / 5 | 1 / 1 / 5 |
+| chunks / files / adrs | 21 / 7 / 3 | 21 / 7 / 3 |
+| índices / políticas RLS | — | 31 / 13 |
+| dimensão dos vetores | 1536 | 1536 |
+
+Pela aplicação apontada ao banco restaurado: readiness OK, login real via Keycloak,
+projeto `demo-loja` legível (status READY, 7 arquivos), análise COMPLETED com 5
+riscos e 3 ADRs, relatório PDF de 4 páginas, e as permissões preservadas —
+`tenant-2` recebe 404 na análise de `tenant-1` e requisição sem token recebe 401.
+
+O Keycloak também subiu em **volume novo** sem intervenção manual, confirmando a
+correção do init do Postgres.
+
+### Scan de dependências
+
+| Alvo | Antes | Depois |
+|---|---|---|
+| `npm audit` frontend (runtime e dev) | 0 | 0 |
+| `pip-audit` worker (runtime e dev) | 7 achados em `starlette 0.38.6` | "No known vulnerabilities found" |
+
+Correção: `fastapi 0.115.0 → 0.162.0` e `uvicorn 0.32.0 → 0.54.0`, que resolvem
+`starlette 1.10.0`. Validado com 74/74 testes do worker.
+
+### Scan das imagens finais
+
+Trivy 0.76.1, DB de 2026-10-28, severidades HIGH e CRITICAL, mesmo Dockerfile e
+plataforma do gate.
+
+| Imagem | Antes | Depois | O que era |
+|---|---|---|---|
+| backend | 4 HIGH | ver abaixo | Go stdlib do `/usr/bin/pebble` da base em cache antiga |
+| frontend | 11 HIGH | **0** | todas no npm CLI embutido (`pacote`, `sigstore`, `brace-expansion`…), não no código |
+| worker | 3 HIGH + 44 HIGH | **0** | `starlette` e 44 pacotes Debian **sem correção upstream** |
+
+Correções aplicadas:
+
+- **Bases fixadas por digest** (manifest list, cobrindo amd64 e arm64) nos três
+  Dockerfiles, com instrução de atualização. O Dependabot passou a acompanhar o
+  ecossistema `docker`, pois um digest fixo não recebe correção sozinho.
+- **Worker migrado de `python:3.12-slim` para `python:3.12-alpine`**: as 44
+  vulnerabilidades HIGH do Debian 13.7 não tinham `FixedVersion` publicada, e a
+  base Alpine entrega a mesma stack com zero achados. `libpq-dev` deixou de ser
+  necessário porque `psycopg[binary]` embute a libpq. Validado com a jornada real
+  (upload → ingestão → análise concluída com 5 riscos).
+- **npm removido da imagem final do frontend**: o runtime executa apenas
+  `node server.js`, e o CLI carregava as únicas vulnerabilidades HIGH da imagem.
+  Readiness e landing conferidas depois da remoção.
+- **Quarkus 3.35.2 → 3.39.5**, corrigindo `quarkus-vertx-http` e arrastando
+  netty, jackson, guava, micrometer, amqp-client e o driver Postgres atualizados —
+  correção na raiz do grafo, em vez de 14 overrides individuais.
+
+Um scan em amd64 não comprova arm64: ao anunciar outra plataforma, escaneie a
+imagem construída para ela.
