@@ -44,6 +44,10 @@ public class UploadResource {
             Project project = uploadUseCase.upload(projectId, file.fileName(), is);
             ProjectResponse response = mapper.toResponse(project);
             return Response.ok(response).build();
+        } catch (RuntimeException e) {
+            // Exceções de domínio têm mapeadores próprios (413, 404, 402…);
+            // reembrulhá-las as transformaria em 500.
+            throw e;
         } catch (Exception e) {
             throw new RuntimeException("Upload processing failed: " + e.getMessage(), e);
         }
