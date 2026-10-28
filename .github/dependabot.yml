@@ -1,0 +1,36 @@
+# Dependabot — atualizações automáticas de dependências.
+# Abre PRs semanais de atualização; combinado com o Dependabot security
+# updates (ligado nas configurações do repo), cobre correções de segurança.
+version: 2
+updates:
+  # Frontend (Next.js)
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 10
+    groups:
+      frontend-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Testes E2E (Playwright)
+  - package-ecosystem: npm
+    directory: /e2e
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # Worker de IA (Python)
+  - package-ecosystem: pip
+    directory: /worker-ai
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
