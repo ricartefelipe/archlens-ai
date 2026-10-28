@@ -166,6 +166,11 @@ archlens:
     client-secret: ${KEYCLOAK_LOGIN_CLIENT_SECRET:archlens-bff-dev-secret}
   analysis:
     llm-fallback-enabled: ${ARCHLENS_ANALYSIS_LLM_FALLBACK:false}
+    # Análise PENDING/PROCESSING sem progresso há mais tempo que isto é
+    # marcada FAILED pelo varredor; precisa ser maior que a análise mais
+    # longa legítima.
+    stuck-after: ${ARCHLENS_ANALYSIS_STUCK_AFTER:PT30M}
+    sweep-every: ${ARCHLENS_ANALYSIS_SWEEP_EVERY:5m}
   rls:
     enabled: ${ARCHLENS_RLS_ENABLED:false}
   report:
