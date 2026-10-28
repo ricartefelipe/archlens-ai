@@ -19,13 +19,34 @@
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <quarkus.platform.artifact-id>quarkus-bom</quarkus.platform.artifact-id>
         <quarkus.platform.group-id>io.quarkus.platform</quarkus.platform.group-id>
-        <quarkus.platform.version>3.35.2</quarkus.platform.version>
+        <quarkus.platform.version>3.39.5</quarkus.platform.version>
         <surefire-plugin.version>3.5.2</surefire-plugin.version>
         <testcontainers.version>1.20.4</testcontainers.version>
+        <!--
+          Correções de segurança à frente do BOM do Quarkus. Remover quando o
+          BOM alcançar estas versões (verificar com `mvn dependency:tree`).
+          jackson 2.22.3: CVE-2026-89407, -89425, -91776, -91777
+          guava 33.7.2:   CVE-2026-102554
+        -->
+        <jackson.version>2.22.3</jackson.version>
+        <guava.version>33.7.2-jre</guava.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Precede o BOM do Quarkus: o primeiro import vence no Maven. -->
+            <dependency>
+                <groupId>com.fasterxml.jackson</groupId>
+                <artifactId>jackson-bom</artifactId>
+                <version>${jackson.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
             <dependency>
                 <groupId>${quarkus.platform.group-id}</groupId>
                 <artifactId>${quarkus.platform.artifact-id}</artifactId>
