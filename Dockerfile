@@ -3,7 +3,7 @@
 #   docker pull eclipse-temurin:21-jdk && \
 #     docker inspect eclipse-temurin:21-jdk --format '{{index .RepoDigests 0}}'
 # Fixar digest não corrige CVE: reconstrua a imagem após atualizar o digest.
-FROM eclipse-temurin:21-jdk@sha256:5d90b26c0784ccf55af55f97cbcf7f3969c66a06299c93bdc72649219942a48f AS build
+FROM eclipse-temurin:24-jdk@sha256:7493205ffe6caa8074fa8a06a276bb1c5ac41d3dd0fd43a0db66d7f776e80b3e AS build
 WORKDIR /build
 
 COPY mvnw .
@@ -13,7 +13,7 @@ COPY src src
 
 RUN chmod +x mvnw && ./mvnw -B package -DskipTests
 
-FROM eclipse-temurin:21-jre@sha256:f37956012e0cb88400e5b3689aeae2d2d735364c1922ae2225536163b5a99f56
+FROM eclipse-temurin:24-jre@sha256:8cb2387a28af84cf0db0948d9c67d4480192f4e567027a3963f145d218e8b4f2
 WORKDIR /deployments
 
 COPY --from=build /build/target/quarkus-app/lib/ ./lib/
