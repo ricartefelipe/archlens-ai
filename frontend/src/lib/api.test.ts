@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createProject, listProjects, uploadProjectZip } from './api';
 
-const API_BASE = 'http://localhost:8080';
+// getApiBase() usa window.location.origin no browser; sob jsdom é essa a origem.
+const API_BASE = window.location.origin;
 
 function jsonResponse(data: unknown, status = 200) {
   return {

@@ -7,14 +7,14 @@ afterEach(() => {
 });
 
 describe('StatusBadge', () => {
-  it('exibe o texto do status', () => {
+  it('exibe o rótulo PT-BR do status', () => {
     render(<StatusBadge status="READY" />);
-    expect(screen.getByText('READY')).toBeInTheDocument();
+    expect(screen.getByText('Pronto')).toBeInTheDocument();
   });
 
   it('aplica as classes de cor mapeadas para o status', () => {
     render(<StatusBadge status="FAILED" />);
-    const badge = screen.getByText('FAILED');
+    const badge = screen.getByText('Falhou');
     expect(badge.className).toContain('text-red-400');
   });
 
@@ -26,6 +26,6 @@ describe('StatusBadge', () => {
 
   it('aumenta o padding no tamanho md', () => {
     render(<StatusBadge status="READY" size="md" />);
-    expect(screen.getByText('READY').className).toContain('px-3');
+    expect(screen.getByText('Pronto').className).toContain('px-3');
   });
 });
