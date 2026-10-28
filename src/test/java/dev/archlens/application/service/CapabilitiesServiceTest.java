@@ -18,6 +18,11 @@ class CapabilitiesServiceTest {
             }
 
             @Override
+            public boolean allowSimulatedDemo() {
+                return false;
+            }
+
+            @Override
             public OpenAi openai() {
                 return new OpenAi() {
                     @Override

@@ -11,6 +11,14 @@ public interface ArchLensLlmConfig {
     @WithDefault("local")
     Provider provider();
 
+    /**
+     * Permite, apenas em modo demo explícito, iniciar produção com gateway
+     * simulado alimentando o fallback. Padrão falso: produção recusa saída
+     * simulada apresentada como análise real.
+     */
+    @WithDefault("false")
+    boolean allowSimulatedDemo();
+
     OpenAi openai();
 
     Ollama ollama();

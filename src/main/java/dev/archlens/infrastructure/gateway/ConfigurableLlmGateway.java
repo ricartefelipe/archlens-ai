@@ -50,4 +50,9 @@ public class ConfigurableLlmGateway implements LlmGateway {
     public String answerQuestion(String question, String analysisContext) {
         return delegate.answerQuestion(question, analysisContext);
     }
+
+    @Override
+    public boolean performsExternalInference() {
+        return delegate.performsExternalInference();
+    }
 }
