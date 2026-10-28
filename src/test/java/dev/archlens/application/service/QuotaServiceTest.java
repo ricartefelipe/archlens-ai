@@ -140,5 +140,10 @@ class QuotaServiceTest {
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return store.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
         }
-    }
+    
+        @Override
+        public void deleteById(java.util.UUID id) {
+            store.removeIf(p -> p.getId().equals(id));
+        }
+}
 }

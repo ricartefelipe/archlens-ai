@@ -164,7 +164,39 @@ class AnalysisServiceTest {
                     .filter(a -> a.getProjectId().equals(projectId) && tenantId.equals(a.getTenantId()))
                     .toList();
         }
-    }
+    
+        @Override
+        public java.util.List<Analysis> findInProgressOlderThan(java.time.Instant cutoff) {
+            return store.stream()
+                    .filter(a -> a.getStatus() == AnalysisStatus.PENDING
+                            || a.getStatus() == AnalysisStatus.PROCESSING)
+                    .filter(a -> a.getUpdatedAt() != null && a.getUpdatedAt().isBefore(cutoff))
+                    .toList();
+        }
+
+        @Override
+        public Optional<AnalysisStatus> findCurrentStatusFresh(UUID id) {
+            return store.stream()
+                    .filter(a -> a.getId().equals(id))
+                    .map(Analysis::getStatus)
+                    .findFirst();
+        }
+
+        @Override
+        public Optional<Analysis> cancelIfInProgress(UUID id, java.time.Instant when, String summary) {
+            for (Analysis a : store) {
+                if (a.getId().equals(id)
+                        && (a.getStatus() == AnalysisStatus.PENDING
+                            || a.getStatus() == AnalysisStatus.PROCESSING)) {
+                    a.setStatus(AnalysisStatus.CANCELLED);
+                    a.setSummary(summary);
+                    a.setUpdatedAt(when);
+                    return Optional.of(a);
+                }
+            }
+            return Optional.empty();
+        }
+}
 
     private static final class InMemoryProjectRepository implements ProjectRepositoryPort {
         private final List<Project> projects = new ArrayList<>();
@@ -217,7 +249,12 @@ class AnalysisServiceTest {
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return projects.stream().anyMatch(p -> p.getId().equals(id) && tenantId.equals(p.getTenantId()));
         }
-    }
+    
+        @Override
+        public void deleteById(UUID id) {
+            projects.removeIf(p -> p.getId().equals(id));
+        }
+}
 
     private static final class InMemoryTenantAccountRepository implements TenantAccountRepositoryPort {
         private final List<TenantAccount> store = new ArrayList<>();

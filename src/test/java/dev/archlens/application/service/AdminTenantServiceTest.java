@@ -151,5 +151,10 @@ class AdminTenantServiceTest {
             project.setStatus(ProjectStatus.CREATED);
             store.add(project);
         }
-    }
+    
+        @Override
+        public void deleteById(java.util.UUID id) {
+            store.removeIf(p -> p.getId().equals(id));
+        }
+}
 }
