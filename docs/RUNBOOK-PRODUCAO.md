@@ -32,6 +32,7 @@ ARCHLENS_STORAGE_BASE_PATH=/data/archlens/projects
 ARCHLENS_LLM_PROVIDER=openai
 ARCHLENS_LLM_OPENAI_API_KEY=<secret>
 ARCHLENS_ANALYSIS_LLM_FALLBACK=false
+ARCHLENS_LLM_ALLOW_SIMULATED_DEMO=false
 ARCHLENS_RLS_ENABLED=true
 ARCHLENS_ENFORCE_QUOTAS=true
 ARCHLENS_REPORT_BRAND_NAME=SuaMarca
@@ -54,7 +55,19 @@ NEXT_PUBLIC_APP_LOGO_URL=https://cdn.seudominio.com/logo.png
 NEXT_PUBLIC_PRIMARY_COLOR=#2563eb
 NEXT_PUBLIC_LANDING_URL=https://seudominio.com
 NEXT_PUBLIC_SUPPORT_URL=mailto:consultoria@seudominio.com
+BACKEND_ORIGIN=http://backend:8080
 ```
+
+`BACKEND_ORIGIN` define o destino dos rewrites de `/v1`, `/public` e `/q` no
+servidor Next. Com o nginx do `docker-compose.prod.yml` à frente, essas rotas não
+chegam ao Next; a variável garante que o frontend funcione também se for exposto
+sem o proxy.
+
+**Origem das conclusões:** com `ARCHLENS_LLM_PROVIDER=local` não há inferência de
+modelo externo, e cada conclusão produzida pelo fallback é marcada com essa origem
+no relatório. Se `ARCHLENS_ANALYSIS_LLM_FALLBACK=true` for combinado com um gateway
+simulado em produção, **a aplicação recusa iniciar** — a menos que
+`ARCHLENS_LLM_ALLOW_SIMULATED_DEMO=true` seja definido explicitamente para uma demo.
 
 ### Worker-ai
 

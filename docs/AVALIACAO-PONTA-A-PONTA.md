@@ -155,3 +155,72 @@ A ferramenta **acelera** a entrega; o cliente paga pela **leitura sênior** e pe
 O ArchLens AI cobre o **ciclo completo de consultoria empacotada**: ingestão, análise multi-stack (Java, SQL, Docker, OpenAPI, pipeline, Terraform, K8s, .NET, Python, Go, TypeScript), RAG/chat, relatório PDF branded, comparativo before/after com export, quotas comerciais, portal org, API pública e webhooks.
 
 **Próximo passo comercial:** piloto pago com cliente real usando runbook consultor + case anonimizado. Evoluções opcionais: Stripe (piloto self-service), landing integrada, dashboard de custo IA.
+
+---
+
+## 9. Fechamento V4 — 28/10/2026
+
+Reexecução local completa dos gates da CI sobre a branch `feature/melhorias-refactor`,
+mais correção dos defeitos encontrados ao exercitar a stack real (Compose) com
+autenticação Keycloak, upload sintético, análise, comparação e exportação.
+
+### Gates executados
+
+| Gate | Comando | Resultado |
+|------|---------|-----------|
+| Backend | `./mvnw -B verify` (Temurin 21, Testcontainers) | 88 testes, 0 falhas, 0 skips |
+| Frontend lint | `npm run lint` | 0 erros, 0 warnings |
+| Frontend tipos | `npx tsc --noEmit` | limpo |
+| Frontend testes | `npm test` (Vitest) | 21/21 |
+| Frontend build | `npm run build` (Next 16.4.3) | ok |
+| Worker | `pytest` (Python 3.12 + Postgres 16, paridade CI) | 74/74, 0 skips |
+| E2E mockado | Playwright, `retries=0` | 13/13 |
+| Compose integrado | stack isolada + seed + jornada autenticada | ver abaixo |
+
+### Defeitos corrigidos nesta execução
+
+| # | Defeito | Prova |
+|---|---------|-------|
+| 1 | `archlens.llm.allow-simulated-demo` não mapeada no `@ConfigMapping` derrubava o boot (SRCFG00050) | `ArchLensLlmConfig.allowSimulatedDemo()`; `./mvnw verify` verde |
+| 2 | 9 warnings de lint React (setState em efeito, deps, navegação) | hook `useClientValue`; `npm run lint` com 0 problemas |
+| 3 | **Login pela UI quebrado no Compose entregue**: a UI chama a API na mesma origem, mas só o `docker-compose.prod.yml` tem nginx roteando `/v1`,`/public`,`/q`. Sem proxy, o POST de login caía no proxy de páginas (307) e virava 405 | rewrites no `next.config.ts` + `isApiPath` no `proxy.ts`; `proxy.test.ts`; login real retorna 200 na stack |
+| 4 | **Bomba de descompressão**: ZIP de 120 KB escrevia 121 MB em disco e respondia 200 | limites de total/entradas/razão no `UploadService`; agora 413 com 8 KB escritos; `UploadServiceTest` + `UploadLimitsResourceTest` |
+| 5 | Exceção de limite virava 500 porque o resource reembrulhava em `RuntimeException` | `UploadResource` repassa exceções de domínio; IT assere 413 |
+| 6 | **Arquivos de credencial eram indexados** (`.tfvars`, `credentials.json`, `secrets.yml`) e iriam a embeddings/LLM | `FileClassifier.isSensitive` + `file_filter.py` no worker; upload de teste extraiu só os 2 arquivos legítimos e o índice ficou com 0 segredos |
+| 7 | Worker aceitava `file_paths` com `../`, podendo ler arquivo de outro projeto/tenant | `resolve_within`; tentativa real registrou `requested=3, total=0, skipped=3` |
+| 8 | Reentrega de mensagem após conclusão duplicaria riscos, quota e webhook; tenant do evento não era revalidado | `AnalysisConsumer.tenantMatches` / `isAlreadySettled` + testes |
+| 9 | RAG respondia sem evidência e não detectava citação inventada | `AnswerGrounding` (abstenção, citações, anti-injeção) + corpus de avaliação |
+| 10 | `%prod` fixava `llm-fallback-enabled: false`, tornando `ARCHLENS_ANALYSIS_LLM_FALLBACK` inócua e o guard de boot sem efeito | `application.yml` usa o mesmo placeholder nos dois perfis |
+| 11 | Keycloak não subia em volume novo no Compose local (schema/banco ausente) | `docker-compose.yml` monta `infra/postgres/init` e aponta para o banco `keycloak` |
+
+### Provas da jornada integrada (stack isolada `archlens-v4`)
+
+- Login real via Keycloak (`/public/auth/login` → 200 com JWT contendo `tenant_id` e roles).
+- Upload sintético (`samples/demo-loja`), ingestão, análise `COMPLETED` com 5 riscos
+  e 6 arquivos, segunda análise, comparação `200`, comparação inexistente `404`,
+  exportação PDF `200` (4 páginas).
+- Isolamento: `tenant-2` recebe `404` na análise de `tenant-1` **mesmo forjando**
+  `X-Tenant-Id: tenant-1`; sem token, `401`; exportação cross-tenant `404`;
+  `GET /v1/projects` de `tenant-2` retorna `[]`.
+- Quotas reais: `402` ao exceder análises do plano Piloto e projetos do Diagnóstico.
+
+### Decisões registradas
+
+- **Simulação vs. real:** `LocalLlmGateway.performsExternalInference() == false`; o
+  resumo de fallback recebe prefixo de origem e `SimulatedGatewayStartupGuard`
+  recusa boot de produção com fallback simulado sem `ARCHLENS_LLM_ALLOW_SIMULATED_DEMO=true`.
+- **MISSING_TEST_COVERAGE:** contrato em `PipelineAnalyzer` — dispara quando um
+  pipeline real (não placeholder) não contém etapa de testes; coberto por
+  `test_pipeline_analyzer_flags_missing_stages` e `test_pipeline_analyzer_ignores_placeholder_sample`.
+- **Sync main/develop:** workflow passou a ser somente leitura (sem PAT, sem PR
+  automático, sem auto-merge). **Ação do proprietário:** desativar nas Actions a
+  versão antiga já publicada do workflow em outras refs — editar o YAML na feature
+  não impede que outras branches a disparem.
+
+### Pendências registradas (P2)
+
+- Plano comercial inválido em `PUT /v1/admin/tenants/{id}/plan` responde 500; deveria ser 400.
+- `POST /v1/ingest/{id}` apaga os chunks antes de validar a lista: uma chamada com
+  caminhos inválidos zera o índice do projeto (worker não é exposto publicamente).
+- Proveniência persistida da resposta (versão de prompt/modelo/embedding, custo,
+  latência) exige migration própria; hoje fica em log e no texto da resposta.
