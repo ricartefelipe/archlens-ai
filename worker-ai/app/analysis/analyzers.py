@@ -297,8 +297,11 @@ class OpenApiAnalyzer(BaseAnalyzer):
 
 class PipelineAnalyzer(BaseAnalyzer):
     _TEST_STAGE = re.compile(
-        r"(?:run:\s*.*\b(mvn|gradle|npm test|pnpm test|yarn test|pytest|go test|dotnet test|jest|vitest)\b|"
-        r"uses:\s*.*\b(test|pytest|jest|vitest|maven|gradle)\b|"
+        r"(?:run:\s*[^\n]*\b(?:"
+        r"mvn\b[^\n]*\b(?:test|verify)|gradle\b[^\n]*\b(?:test|check)|"
+        r"npm test|pnpm test|yarn test|pytest|go test|dotnet test|jest|vitest"
+        r")\b|"
+        r"uses:\s*[^\n]*\b(?:test|pytest|jest|vitest|maven|gradle)\b|"
         r"^\s*test:\s*$)",
         re.IGNORECASE | re.MULTILINE,
     )

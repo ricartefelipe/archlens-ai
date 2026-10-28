@@ -10,6 +10,7 @@ from app.analysis.analyzers import (
     PipelineAnalyzer,
     PythonAnalyzer,
     TerraformAnalyzer,
+    TypeScriptAnalyzer,
     YamlConfigAnalyzer,
 )
 from app.analysis.rules import RiskCategory, RiskSeverity
