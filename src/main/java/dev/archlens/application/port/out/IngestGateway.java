@@ -9,6 +9,13 @@ public interface IngestGateway {
 
     IngestJobStatus getStatus(UUID projectId);
 
+    /**
+     * Apaga chunks, vetores e estado de ingestão do projeto no worker.
+     * Parte do erasure: precisa concluir antes de remover o projeto do banco,
+     * senão o índice vira órfão sem dono para apagá-lo depois.
+     */
+    void deleteProjectData(UUID projectId);
+
     record IngestJobStatus(
             UUID projectId,
             String status,

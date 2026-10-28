@@ -74,4 +74,10 @@ public class ProjectRepositoryAdapter implements ProjectRepositoryPort {
     public boolean existsByIdAndTenantId(UUID id, String tenantId) {
         return repository.findByIdAndTenantId(id, tenantId).isPresent();
     }
+
+    @Override
+    @Transactional
+    public void deleteById(UUID id) {
+        repository.deleteById(id);
+    }
 }

@@ -170,6 +170,15 @@ class IngestStatusRepository:
             async with session.begin():
                 await session.execute(stmt)
 
+    async def delete_by_project_id(self, project_id: UUID) -> None:
+        async with async_session_factory() as session:
+            async with session.begin():
+                await session.execute(
+                    delete(ingestion_status).where(
+                        ingestion_status.c.project_id == project_id
+                    )
+                )
+
     async def get(self, project_id: UUID) -> IngestStatus | None:
         async with async_session_factory() as session:
             stmt = select(ingestion_status).where(

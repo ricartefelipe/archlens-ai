@@ -155,7 +155,25 @@ class QuestionServiceTest {
         public List<Analysis> findByProjectIdAndTenantId(UUID projectId, String tenantId) {
             return analysis == null ? List.of() : List.of(analysis);
         }
-    }
+    
+        @Override
+        public java.util.List<dev.archlens.domain.model.Analysis> findInProgressOlderThan(
+                java.time.Instant cutoff) {
+            return java.util.List.of();
+        }
+
+        @Override
+        public java.util.Optional<dev.archlens.domain.model.AnalysisStatus> findCurrentStatusFresh(
+                java.util.UUID id) {
+            return java.util.Optional.empty();
+        }
+
+        @Override
+        public java.util.Optional<dev.archlens.domain.model.Analysis> cancelIfInProgress(
+                java.util.UUID id, java.time.Instant when, String summary) {
+            return java.util.Optional.empty();
+        }
+}
 
     private static final class InMemoryQuestionRepository implements QuestionRepositoryPort {
         private final List<Question> store = new ArrayList<>();

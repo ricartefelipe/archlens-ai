@@ -45,6 +45,17 @@ public class WorkerAiIngestAdapter implements IngestGateway {
     }
 
     @Override
+    public void deleteProjectData(UUID projectId) {
+        LOG.infof("Deleting worker data (chunks, vectors, ingest status) for project %s", projectId);
+        try {
+            client.deleteProjectData(projectId);
+        } catch (Exception e) {
+            LOG.errorf(e, "Failed to delete worker data for project %s", projectId);
+            throw new RuntimeException("Worker data deletion failed: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public IngestJobStatus getStatus(UUID projectId) {
         try {
             return toStatus(client.getStatus(projectId));
@@ -75,6 +86,10 @@ public class WorkerAiIngestAdapter implements IngestGateway {
         @GET
         @Path("/v1/ingest/{projectId}/status")
         IngestStatusDto getStatus(@jakarta.ws.rs.PathParam("projectId") UUID projectId);
+
+        @jakarta.ws.rs.DELETE
+        @Path("/v1/ingest/{projectId}")
+        void deleteProjectData(@jakarta.ws.rs.PathParam("projectId") UUID projectId);
     }
 
     record IngestRequestDto(

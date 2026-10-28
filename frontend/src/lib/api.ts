@@ -120,6 +120,14 @@ export async function createAnalysis(tenantId: string, projectId: string): Promi
   return apiFetch(`/v1/projects/${projectId}/analyses`, tenantId, { method: 'POST' });
 }
 
+export async function cancelAnalysis(tenantId: string, projectId: string, analysisId: string): Promise<Analysis> {
+  return apiFetch(`/v1/projects/${projectId}/analyses/${analysisId}/cancel`, tenantId, { method: 'POST' });
+}
+
+export async function deleteProject(tenantId: string, projectId: string): Promise<void> {
+  await apiFetch(`/v1/projects/${projectId}`, tenantId, { method: 'DELETE' });
+}
+
 export async function getAnalysis(tenantId: string, projectId: string, analysisId: string): Promise<Analysis> {
   return apiFetch(`/v1/projects/${projectId}/analyses/${analysisId}`, tenantId);
 }

@@ -172,6 +172,15 @@ public class AnalysisConsumer {
                 analysis.setSummary(staticResult.summary());
             }
 
+            // O usuário pode ter cancelado enquanto o worker processava: um
+            // resultado tardio não pode sobrescrever a decisão nem gerar
+            // quota e webhook de conclusão.
+            if (wasCancelledMeanwhile(analysis.getId())) {
+                LOG.infof("Analysis %s cancelada durante o processamento; resultado descartado",
+                        analysis.getId());
+                return;
+            }
+
             analysis.setRisks(risks);
             analysis.setStatus(AnalysisStatus.COMPLETED);
             analysis.setUpdatedAt(Instant.now());
@@ -187,6 +196,11 @@ public class AnalysisConsumer {
 
         } catch (Exception e) {
             LOG.errorf(e, "Async analysis %s failed", event.analysisId());
+            if (wasCancelledMeanwhile(analysis.getId())) {
+                LOG.infof("Analysis %s cancelada durante o processamento; falha tardia descartada",
+                        analysis.getId());
+                return;
+            }
             analysis.setStatus(AnalysisStatus.FAILED);
             analysis.setSummary(e.getMessage());
             analysis.setUpdatedAt(Instant.now());
@@ -205,12 +219,21 @@ public class AnalysisConsumer {
     }
 
     /**
-     * Estado em que o resultado já foi entregue: reprocessar duplicaria riscos,
-     * consumo de quota e webhook. {@code FAILED} fica de fora para permitir
-     * retomada depois de falha transitória.
+     * Estado em que o resultado já foi entregue ou a análise foi cancelada:
+     * reprocessar duplicaria riscos, consumo de quota e webhook — ou reviveria
+     * algo que o usuário mandou parar. {@code FAILED} fica de fora para
+     * permitir retomada depois de falha transitória.
      */
     static boolean isAlreadySettled(AnalysisStatus status) {
-        return status == AnalysisStatus.COMPLETED;
+        return status == AnalysisStatus.COMPLETED || status == AnalysisStatus.CANCELLED;
+    }
+
+    private boolean wasCancelledMeanwhile(UUID analysisId) {
+        // Leitura direta do banco: findById devolveria a instância do cache de
+        // primeiro nível desta transação, ainda em PROCESSING.
+        return analysisRepository.findCurrentStatusFresh(analysisId)
+                .map(status -> status == AnalysisStatus.CANCELLED)
+                .orElse(false);
     }
 
     private void dispatchWebhook(AnalysisEvent event, Analysis analysis, String webhookEvent) {

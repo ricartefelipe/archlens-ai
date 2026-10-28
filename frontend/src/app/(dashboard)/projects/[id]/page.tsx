@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, Play, MessageSquare, FileCode, BarChart3, GitCompare, AlertCircle } from 'lucide-react';
+import { Loader2, Play, MessageSquare, FileCode, BarChart3, GitCompare, AlertCircle, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import clsx from 'clsx';
 import {
   getProject, listProjectFiles, listAnalyses,
   uploadProjectZip, createAnalysis, getAnalysis,
+  cancelAnalysis, deleteProject,
 } from '@/lib/api';
 import { parseApiError } from '@/lib/api-error';
 import { getTenantId } from '@/lib/auth';
@@ -45,6 +46,8 @@ export default function ProjectDetailPage() {
   );
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [lastUploadName, setLastUploadName] = useState<string | null>(null);
   const didAutoSelectTab = useRef(false);
@@ -129,6 +132,42 @@ export default function ProjectDetailPage() {
 
     return () => clearInterval(interval);
   }, [projectBusy, loadData]);
+
+  async function handleCancelAnalysis(analysisId: string) {
+    setCancellingId(analysisId);
+    setErrorMessage(null);
+    try {
+      await cancelAnalysis(getTenantId(), projectId, analysisId);
+      await loadData({ preserveTab: true });
+    } catch (err) {
+      setErrorMessage(parseApiError(err));
+    } finally {
+      setCancellingId(null);
+    }
+  }
+
+  async function handleDeleteProject() {
+    // Ação destrutiva e definitiva: exige confirmação explícita digitada.
+    const confirmation = window.prompt(
+      `Excluir o projeto "${project?.name}" apaga análises, riscos, ADRs, arquivos e o índice de busca, sem volta. Digite o nome do projeto para confirmar:`
+    );
+    if (confirmation === null) {
+      return;
+    }
+    if (confirmation.trim() !== project?.name) {
+      setErrorMessage('Exclusão não confirmada: o nome digitado não corresponde ao projeto.');
+      return;
+    }
+    setDeleting(true);
+    setErrorMessage(null);
+    try {
+      await deleteProject(getTenantId(), projectId);
+      router.push('/projects');
+    } catch (err) {
+      setErrorMessage(parseApiError(err));
+      setDeleting(false);
+    }
+  }
 
   async function handleUpload(file: File) {
     setUploading(true);
@@ -258,6 +297,15 @@ export default function ProjectDetailPage() {
           >
             {creatingAnalysis ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             Executar análise
+          </button>
+          <button
+            onClick={handleDeleteProject}
+            disabled={deleting}
+            title="Excluir o projeto e todos os seus dados"
+            className="flex items-center gap-2 px-4 py-2 border border-border text-muted-foreground rounded-lg text-sm font-medium hover:text-destructive hover:border-destructive/50 disabled:opacity-50 transition-colors"
+          >
+            {deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+            Excluir
           </button>
         </div>
       </div>
@@ -410,6 +458,16 @@ export default function ProjectDetailPage() {
                   </div>
                 )}
                   </button>
+                  {(a.status === 'PENDING' || a.status === 'PROCESSING') && (
+                    <button
+                      type="button"
+                      onClick={() => handleCancelAnalysis(a.id)}
+                      disabled={cancellingId === a.id}
+                      className="shrink-0 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground hover:text-destructive hover:border-destructive/50 transition-colors disabled:opacity-50"
+                    >
+                      {cancellingId === a.id ? 'Cancelando…' : 'Cancelar'}
+                    </button>
+                  )}
                 </div>
               </div>
             ))
