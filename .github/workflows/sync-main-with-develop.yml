@@ -1,6 +1,9 @@
 name: Sync main with develop
 
-# Git flow: após push em develop, abre PR develop → main e faz merge (main protegida).
+# Git flow: verificação SOMENTE LEITURA. Após push em develop, apenas informa
+# se develop está à frente de main e fornece o link para abrir um PR manual.
+# Não cria PR, não habilita auto-merge, não faz force-push/reset e não usa PAT.
+# A promoção develop -> main é decisão do proprietário, via PR revisado.
 
 on:
   push:
@@ -12,47 +15,34 @@ concurrency:
   cancel-in-progress: true
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
-  merge:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Abrir ou reutilizar PR develop → main e habilitar auto-merge
+      - name: Verificar divergência develop -> main (somente leitura)
         env:
-          GH_TOKEN: ${{ secrets.SYNC_TOKEN }}
           REPOSITORY: ${{ github.repository }}
+          SERVER_URL: ${{ github.server_url }}
         run: |
           set -euo pipefail
-
-          if [[ -z "${GH_TOKEN:-}" ]]; then
-            echo "::warning ::Secret SYNC_TOKEN ausente; sincronização automática desativada. Configure um PAT com contents:write e pull-requests:write."
-            exit 0
-          fi
 
           git fetch origin main develop
 
           AHEAD=$(git rev-list --count origin/main..origin/develop)
           if [[ "$AHEAD" -eq 0 ]]; then
-            echo "main já contém todos os commits de develop; nada a sincronizar."
+            echo "main já contém todos os commits de develop; nada a promover."
             exit 0
           fi
 
-          OPEN=$(gh pr list --repo "$REPOSITORY" --base main --head develop --state open --json number -q '.[0].number // empty')
-          if [[ -z "${OPEN:-}" ]] || [[ "$OPEN" == "null" ]]; then
-            gh pr create \
-              --repo "$REPOSITORY" \
-              --base main \
-              --head develop \
-              --title 'chore(sync): alinhar main com develop [automático]' \
-              --body 'Criado automaticamente pelo workflow Sync main with develop (git flow).'
-          fi
-
-          PR=$(gh pr list --repo "$REPOSITORY" --base main --head develop --state open --json number -q '.[0].number')
-          echo "Habilitando auto-merge do PR #$PR (mergeia quando os checks obrigatórios passarem)."
-          gh pr merge "$PR" --repo "$REPOSITORY" --merge --auto
+          echo "::notice ::develop está $AHEAD commit(s) à frente de main."
+          echo "Para promover, abra um PR manual revisado (nenhum PR é criado ou mergeado por este workflow):"
+          echo "  ${SERVER_URL}/${REPOSITORY}/compare/main...develop?expand=1"
+          echo ""
+          echo "Commits pendentes:"
+          git log --oneline origin/main..origin/develop
