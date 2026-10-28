@@ -73,6 +73,15 @@ class ChunkRepository:
                     )
                 )
 
+    async def count_by_project_id(self, project_id: UUID) -> int:
+        async with async_session_factory() as session:
+            result = await session.execute(
+                select(func.count())
+                .select_from(document_chunks)
+                .where(document_chunks.c.project_id == project_id)
+            )
+            return int(result.scalar() or 0)
+
     async def find_similar_with_scores(
         self, project_id: UUID, embedding: list[float], limit: int = 5
     ) -> list[tuple[DocumentChunk, float]]:
