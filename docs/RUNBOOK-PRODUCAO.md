@@ -154,14 +154,44 @@ Escopos: `read` (GET) e `write` (POST analyses, uploads). Documentação interat
 
 ---
 
-## 8. Rollback
+## 8. Imagens base e scan de vulnerabilidades
+
+As bases dos três Dockerfiles são fixadas por **digest** (manifest list, cobrindo
+amd64 e arm64), para que o build seja reproduzível. Fixar o digest não corrige CVE:
+quando houver correção na base, atualize o digest e **reconstrua** a imagem.
+
+```bash
+# Atualizar o digest de uma base
+docker pull eclipse-temurin:21-jre
+docker inspect eclipse-temurin:21-jre --format '{{index .RepoDigests 0}}'
+
+# Reconstruir ignorando camadas em cache da base antiga
+docker compose -f docker-compose.prod.yml build --pull backend frontend worker-ai
+```
+
+O Dependabot acompanha o ecossistema `docker` nos três diretórios e abre PR quando
+a base avança — sem isso, um digest fixo deixaria de receber correções.
+
+Scan das imagens finais (o mesmo critério usado no fechamento V4):
+
+```bash
+docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
+  aquasec/trivy:latest image --scanners vuln --severity HIGH,CRITICAL <imagem>
+```
+
+Um scan em amd64 não comprova arm64: ao anunciar a plataforma, escaneie a imagem
+construída para ela.
+
+---
+
+## 9. Rollback
 
 1. Manter migration Liquibase forward-only; rollback = deploy versão anterior + backup DB se migration irreversível.
 2. Worker e backend devem ser versionados juntos (contrato analyze/ingest).
 
 ---
 
-## 9. Checklist go-live consultoria
+## 10. Checklist go-live consultoria
 
 - [ ] OIDC PKCE ativo no frontend
 - [ ] RLS habilitado (`ARCHLENS_RLS_ENABLED=true`)
