@@ -43,6 +43,18 @@ class IngestService:
             skipped=max(requested - total_files, 0),
         )
 
+        # Nenhum caminho utilizável: preserva o índice atual em vez de apagá-lo.
+        # A ordem anterior (apagar e depois descobrir) deixava o projeto sem
+        # índice quando a lista recebida era inválida ou só tinha arquivos
+        # sensíveis, sem nada para reindexar em seguida.
+        if not resolved_paths:
+            log.warning(
+                "ingest_skipped_no_usable_files",
+                project_id=str(project_id),
+                requested=requested,
+            )
+            return await self._status_for_empty_ingest(project_id, requested)
+
         await self._repository.delete_by_project_id(project_id)
         log.info("old_chunks_deleted", project_id=str(project_id))
 
@@ -109,4 +121,26 @@ class IngestService:
             total_files=total_files,
             processed_files=processed,
             total_chunks=len(all_chunks),
+        )
+
+    async def _status_for_empty_ingest(
+        self, project_id: UUID, requested: int
+    ) -> IngestStatus:
+        """Status de uma ingestão sem arquivos utilizáveis, sem tocar no índice.
+
+        `total_chunks` reporta o que o projeto ainda tem indexado, para que o
+        chamador veja que o índice anterior foi preservado.
+        """
+        try:
+            existing = await self._repository.count_by_project_id(project_id)
+        except Exception:  # noqa: BLE001 - contagem é informativa
+            log.warning("chunk_count_failed", project_id=str(project_id))
+            existing = 0
+
+        return IngestStatus(
+            project_id=project_id,
+            status="no_files",
+            total_files=0,
+            processed_files=0,
+            total_chunks=existing,
         )

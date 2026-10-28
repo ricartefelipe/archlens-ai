@@ -75,7 +75,8 @@ public class AdminTenantResource {
         if (!securityContext.isUserInRole("admin")) {
             throw new jakarta.ws.rs.ForbiddenException();
         }
-        TenantAccountStatus status = TenantAccountStatus.valueOf(request.status());
+        TenantAccountStatus status = parseEnum(
+                TenantAccountStatus.class, request.status(), "status");
         TenantAdminView view = adminTenantService.updateStatus(tenantId, status);
         return platformMapper.toAdminTenantResponse(view);
     }
@@ -83,14 +84,36 @@ public class AdminTenantResource {
     @PUT
     @Path("/{tenantId}/plan")
     public Response upgradePlan(@PathParam("tenantId") String tenantId,
-                                UpgradeTenantPlanRequest request,
+                                @Valid UpgradeTenantPlanRequest request,
                                 @jakarta.ws.rs.core.Context SecurityContext securityContext) {
         if (!securityContext.isUserInRole("admin")) {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
-        CommercialPlan plan = CommercialPlan.valueOf(request.plan());
+        CommercialPlan plan = parseEnum(CommercialPlan.class, request.plan(), "plan");
         quotaService.upgradePlan(tenantId, plan, request.notes());
         AccountUsageResponse body = accountMapper.toResponse(quotaService.usageSnapshot(tenantId));
         return Response.ok(body).build();
+    }
+
+    /**
+     * Converte o valor recebido para o enum, respondendo 400 com os valores
+     * aceitos quando não corresponde. {@code Enum.valueOf} lançaria
+     * {@link IllegalArgumentException}, que virava 500 — erro do cliente
+     * apresentado como falha do servidor.
+     */
+    static <E extends Enum<E>> E parseEnum(Class<E> type, String value, String field) {
+        if (value != null) {
+            for (E candidate : type.getEnumConstants()) {
+                if (candidate.name().equalsIgnoreCase(value.trim())) {
+                    return candidate;
+                }
+            }
+        }
+
+        String accepted = java.util.Arrays.stream(type.getEnumConstants())
+                .map(Enum::name)
+                .collect(java.util.stream.Collectors.joining(", "));
+        throw new jakarta.ws.rs.BadRequestException(
+                "Valor inválido para '" + field + "'. Aceitos: " + accepted + ".");
     }
 }
