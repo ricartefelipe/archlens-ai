@@ -14,6 +14,7 @@ export const STATUS_LABELS: Record<string, string> = {
   ACCEPTED: 'Aceito',
   DEPRECATED: 'Obsoleto',
   SUPERSEDED: 'Substituído',
+  CANCELLED: 'Cancelado',
 };
 
 export const SEVERITY_LABELS: Record<string, string> = {

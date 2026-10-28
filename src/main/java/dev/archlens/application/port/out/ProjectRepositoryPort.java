@@ -19,4 +19,10 @@ public interface ProjectRepositoryPort {
     boolean existsById(UUID id);
 
     boolean existsByIdAndTenantId(UUID id, String tenantId);
+
+    /**
+     * Remove o projeto; as tabelas relacionais dependentes (análises, riscos,
+     * ADRs, perguntas, arquivos) caem por cascata de chave estrangeira.
+     */
+    void deleteById(UUID id);
 }

@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ArchLens AI Worker", version="0.2.2", lifespan=lifespan)
+app = FastAPI(title="ArchLens AI Worker", version="0.3.0", lifespan=lifespan)
 
 _ingest_status_repository = IngestStatusRepository()
 
@@ -77,6 +77,19 @@ async def ingest_status(project_id: UUID) -> IngestStatus:
     if status is None:
         raise HTTPException(status_code=404, detail="No ingestion found for project")
     return status
+
+
+@app.delete("/v1/ingest/{project_id}", status_code=204)
+async def delete_project_data(project_id: UUID) -> None:
+    """Apaga chunks, vetores e estado de ingestão do projeto (erasure).
+
+    Chamado pelo backend ao excluir um projeto; idempotente — apagar o que
+    não existe também responde 204.
+    """
+    repository = ChunkRepository()
+    await repository.delete_by_project_id(project_id)
+    await _ingest_status_repository.delete_by_project_id(project_id)
+    log.info("project_data_deleted", project_id=str(project_id))
 
 
 @app.post("/v1/search")

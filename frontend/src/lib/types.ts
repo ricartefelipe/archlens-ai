@@ -23,7 +23,7 @@ export interface ProjectFile {
 export interface Analysis {
   id: string;
   projectId: string;
-  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
   summary: string | null;
   risks: ArchitecturalRisk[];
   createdAt: string;

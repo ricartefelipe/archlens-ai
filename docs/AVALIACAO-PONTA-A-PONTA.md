@@ -337,3 +337,60 @@ só arquivos sensíveis, e reindexação legítima que continua trocando o índi
 Sem `target-branch`, o Dependabot abre PR contra a branch padrão: havia 18 PRs
 abertos direto em `main`, contornando a integração em `develop` que o README
 define. Todas as entradas passaram a declarar `target-branch: develop`.
+
+---
+
+## 12. Ciclo de vida da análise e erasure — 28/10/2026
+
+Fechamento das lacunas levantadas na revisão de §11: o pipeline não tinha como
+liberar trabalho abandonado, não havia cancelamento e não havia exclusão de dados.
+
+### Análise abandonada ficava presa para sempre
+
+Não existia lease, heartbeat, timeout nem tarefa periódica. O consumidor marcava
+`PROCESSING` e, se o processo caísse ali sem reentrega da mensagem, a análise
+permanecia nesse estado indefinidamente — o cliente via progresso eterno e só um
+UPDATE manual no banco resolvia.
+
+`StuckAnalysisSweeper` roda a cada `archlens.analysis.sweep-every` (padrão 5m) e
+marca como `FAILED`, com mensagem legível, tudo que está em andamento sem progresso
+há mais de `archlens.analysis.stuck-after` (padrão 30m). A varredura cruza tenants,
+então usa o bypass de RLS apenas na sua transação, e notifica cada webhook no tenant
+dono da análise. O prazo precisa ser maior que a análise legítima mais longa: expirar
+cedo derrubaria trabalho vivo. A reentrega do broker continua sendo o caminho
+primário de retomada; o varredor é a rede de segurança.
+
+**Defeito encontrado no caminho:** `AnalysisRepositoryAdapter.save` não copiava
+`updatedAt` no update, então a coluna ficava congelada no valor do insert e não
+refletia transição alguma de status. Sem isso, nenhum varredor por idade
+funcionaria.
+
+### Cancelamento
+
+`POST /v1/projects/{id}/analyses/{id}/cancel` transiciona para `CANCELLED` com
+lock pessimista na linha, que serializa a corrida com o consumidor: quem pega o
+lock primeiro decide. O consumidor relê o status antes de gravar `COMPLETED` ou
+`FAILED` e descarta resultado tardio de análise cancelada — sem quota nem webhook
+de conclusão. Cancelar o que já está cancelado é idempotente; estado terminal
+responde 409. `isAlreadySettled` passou a incluir `CANCELLED`, para que uma
+reentrega não ressuscite o que o usuário parou.
+
+A operação devolve o estado resultante em vez de um booleano: a releitura após o
+update lia a instância do contexto de persistência, ainda com o status antigo.
+
+### Erasure
+
+`DELETE /v1/projects/{id}` apaga, nesta ordem: índice e vetores no worker
+(`DELETE /v1/ingest/{id}`, novo), arquivos extraídos no storage e as linhas
+relacionais (cascata leva análises, riscos, ADRs, perguntas e arquivos). A ordem
+importa — se o registro saísse primeiro e o worker falhasse, os embeddings ficariam
+órfãos sem dono capaz de apagá-los. Cada passo é idempotente, então uma falha no
+meio deixa o projeto visível e a operação pode ser repetida. Na UI, exige digitar
+o nome do projeto para confirmar.
+
+### Endpoints sem corpo exigiam Content-Type
+
+`POST /analyses`, o novo `/cancel` e o `DELETE` de projeto herdavam
+`@Consumes(APPLICATION_JSON)` da classe e respondiam **415** a um cliente que não
+mandasse o header — o frontend sempre manda, um `curl` simples não. Passaram a
+aceitar `MediaType.WILDCARD`.

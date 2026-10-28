@@ -232,7 +232,12 @@ class UploadServiceTest {
         public boolean existsByIdAndTenantId(UUID id, String tenantId) {
             return project.getId().equals(id) && project.getTenantId().equals(tenantId);
         }
-    }
+    
+        @Override
+        public void deleteById(java.util.UUID id) {
+            // fake de um único projeto: nada a remover
+        }
+}
 
     private static final class RecordingFileRepository implements ProjectFileRepositoryPort {
 
@@ -297,6 +302,11 @@ class UploadServiceTest {
         @Override
         public IngestJobStatus getStatus(UUID projectId) {
             return new IngestJobStatus(projectId, "COMPLETED", 0, 0, 0);
+        }
+
+        @Override
+        public void deleteProjectData(UUID projectId) {
+            // erasure não participa dos limites de extração
         }
     }
 }
