@@ -46,6 +46,11 @@ updates:
   # Imagens base dos Dockerfiles. As bases são fixadas por digest para que o
   # build seja reproduzível; sem estas entradas, um digest fixo deixaria de
   # receber correções de segurança da base.
+  #
+  # Major fica de fora: a runtime das imagens tem de casar com a declarada na
+  # CI (Java 21, Node 22, Python 3.12). Subir para Java 24 ou Node 26 por PR
+  # automático quebraria essa paridade sem ninguém decidir — essa troca é feita
+  # junto com a da CI, à mão.
   - package-ecosystem: docker
     directories:
       - /
@@ -55,3 +60,7 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
