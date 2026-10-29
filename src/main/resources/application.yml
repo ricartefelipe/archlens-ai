@@ -18,6 +18,11 @@ quarkus:
   liquibase:
     migrate-at-start: true
     change-log: db/changelog/db.changelog-master.yaml
+    # As migrations precisam do owner do schema (DDL, FORCE RLS, GRANTs),
+    # enquanto a aplicação conecta com um role sem superuser para que o RLS
+    # por tenant valha. Sem override, usa as credenciais do datasource.
+    username: ${ARCHLENS_MIGRATION_DB_USERNAME:${QUARKUS_DATASOURCE_USERNAME:archlens}}
+    password: ${ARCHLENS_MIGRATION_DB_PASSWORD:${QUARKUS_DATASOURCE_PASSWORD:archlens}}
 
   http:
     port: 8080
