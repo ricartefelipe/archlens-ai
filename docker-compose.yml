@@ -6,6 +6,8 @@ services:
       POSTGRES_DB: archlens
       POSTGRES_USER: archlens
       POSTGRES_PASSWORD: archlens
+      # Senha do role sem superuser que a aplicação usa (RLS efetivo).
+      ARCHLENS_APP_DB_PASSWORD: ${ARCHLENS_APP_DB_PASSWORD:-archlens-app}
     ports:
       - "5432:5432"
     volumes:
@@ -96,8 +98,12 @@ services:
     environment:
       QUARKUS_PROFILE: prod
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/archlens
-      QUARKUS_DATASOURCE_USERNAME: archlens
-      QUARKUS_DATASOURCE_PASSWORD: archlens
+      # Runtime com role sem superuser: é o que faz o RLS por tenant valer.
+      QUARKUS_DATASOURCE_USERNAME: archlens_app
+      QUARKUS_DATASOURCE_PASSWORD: ${ARCHLENS_APP_DB_PASSWORD:-archlens-app}
+      # Migrations com o owner do schema (DDL, FORCE RLS, GRANTs).
+      ARCHLENS_MIGRATION_DB_USERNAME: archlens
+      ARCHLENS_MIGRATION_DB_PASSWORD: archlens
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: archlens
