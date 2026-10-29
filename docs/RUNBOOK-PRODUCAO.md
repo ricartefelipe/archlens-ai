@@ -34,6 +34,8 @@ ARCHLENS_LLM_OPENAI_API_KEY=<secret>
 ARCHLENS_ANALYSIS_LLM_FALLBACK=false
 ARCHLENS_LLM_ALLOW_SIMULATED_DEMO=false
 ARCHLENS_RLS_ENABLED=true
+# Role sem superuser usado pela aplicação em runtime — é o que faz o RLS valer.
+ARCHLENS_APP_DB_PASSWORD=<secret>
 ARCHLENS_ENFORCE_QUOTAS=true
 ARCHLENS_REPORT_BRAND_NAME=SuaMarca
 ARCHLENS_REPORT_LOGO_URL=https://cdn.seudominio.com/logo.png
@@ -184,14 +186,46 @@ construída para ela.
 
 ---
 
-## 9. Rollback
+## 9. RLS efetivo e upgrade de instalações existentes
+
+A partir da 0.4.0 o isolamento por tenant no banco é real, com três peças que
+precisam existir juntas:
+
+1. **Role de aplicação sem superuser** (`archlens_app`): superuser ignora RLS
+   sempre, e o owner ignora sem FORCE. O runtime conecta com `archlens_app`
+   (`QUARKUS_DATASOURCE_USERNAME`); as migrations continuam com o owner
+   (`ARCHLENS_MIGRATION_DB_USERNAME`/`PASSWORD`), que faz DDL e GRANTs.
+2. **FORCE ROW LEVEL SECURITY** em todas as tabelas com `tenant_id`
+   (migration 009).
+3. **Política sem fallback permissivo**: sem tenant no contexto, nenhuma linha
+   é visível; gravação em outro tenant é recusada (`WITH CHECK`). Manutenção
+   que cruza tenants usa `app.rls_bypass` explicitamente.
+
+**Upgrade de instalação existente:** a migration 009 cria o role e os GRANTs,
+mas **sem senha** — defini-la é passo manual, para não existir segredo padrão:
+
+```sql
+ALTER ROLE archlens_app PASSWORD '<a mesma de ARCHLENS_APP_DB_PASSWORD>';
+```
+
+Depois exporte `ARCHLENS_APP_DB_PASSWORD` e suba o backend (que passa a conectar
+como `archlens_app`). Em instalação nova, `infra/postgres/init/02-app-role.sh`
+define a senha a partir do ambiente na criação do cluster.
+
+**Limite conhecido:** o worker ainda conecta com o owner (ele é interno, sem
+porta publicada, e recebe o tenant validado pelo backend); movê-lo para um role
+restrito com contexto de tenant por sessão fica registrado como melhoria.
+
+---
+
+## 10. Rollback
 
 1. Manter migration Liquibase forward-only; rollback = deploy versão anterior + backup DB se migration irreversível.
 2. Worker e backend devem ser versionados juntos (contrato analyze/ingest).
 
 ---
 
-## 10. Checklist go-live consultoria
+## 11. Checklist go-live consultoria
 
 - [ ] OIDC PKCE ativo no frontend
 - [ ] RLS habilitado (`ARCHLENS_RLS_ENABLED=true`)
