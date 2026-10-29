@@ -394,3 +394,111 @@ o nome do projeto para confirmar.
 `@Consumes(APPLICATION_JSON)` da classe e respondiam **415** a um cliente que não
 mandasse o header — o frontend sempre manda, um `curl` simples não. Passaram a
 aceitar `MediaType.WILDCARD`.
+
+---
+
+## 13. Atualizações de dependência pendentes — 28/10/2026
+
+Os 17 PRs que o Dependabot havia aberto **contra `main`** foram fechados: o fluxo
+do projeto manda tudo entrar por `develop`, e a configuração agora declara
+`target-branch: develop`. O Dependabot reabre o que continuar aplicável na próxima
+execução semanal, já na branch certa.
+
+Fechar um PR do Dependabot pode impedir que ele recrie aquela versão exata, então
+a lista fica registrada aqui para conferência:
+
+| Alvo | De → para | Observação |
+|---|---|---|
+| `actions/checkout` | 4 → 7 | major de action |
+| `actions/setup-node` | 4 → 7 | major de action |
+| `actions/setup-java` | 4 → 6 | major de action |
+| `actions/setup-python` | 5 → 7 | major de action |
+| `softprops/action-gh-release` | 2 → 3 | major de action |
+| `@playwright/test` | 1.61.0 → 1.64.1 | minor, E2E |
+| `pytest` | 9.0.3 → 9.1.1 | minor, worker |
+| `python-dotenv` | 1.2.2 → 1.2.4 | patch, worker |
+| `structlog` | 24.4.0 → 26.1.0 | major, worker |
+| `pgvector` | 0.3.6 → 0.5.1 | minor, worker |
+| `typescript` | 5.9.3 → 7.0.2 | major, dev |
+| `eslint` | 9.39.4 → 10.13.0 | major, dev |
+| `jsdom` | 29.1.1 → 30.1.3 | major, dev |
+| `@testing-library/jest-dom` | 6.9.1 → 7.0.1 | major, dev |
+| `@types/node` | 22.20.5 → 26.6.5 | major, dev |
+| `node` (imagem) | 22-alpine → 26-alpine | **não aplicar** |
+| `eclipse-temurin` (imagem) | 21-jre → 24-jre | **não aplicar** |
+
+Os dois últimos apareceram porque o ecossistema `docker` passou a ser acompanhado
+em §10, e revelaram um problema da própria configuração: a runtime das imagens tem
+de casar com a declarada na CI (Java 21, Node 22, Python 3.12). Subir para Java 24
+ou Node 26 por PR automático quebraria essa paridade sem decisão humana, então a
+entrada `docker` passou a ignorar atualizações major — essa troca é feita junto com
+a da CI, à mão.
+
+Nenhum destes é correção de segurança com CVE aberta: o `pip-audit` do worker e o
+`npm audit` do frontend estão limpos, e as três imagens finais seguem com zero
+achados HIGH/CRITICAL.
+
+---
+
+## 14. RLS por tenant passa a valer de verdade — 28/10/2026
+
+O gate de migração sobre dados existentes (§4 do C7, que faltava) revelou o achado
+mais sério do dia: **o RLS era inteiramente decorativo**. O isolamento efetivo
+vinha apenas dos filtros por tenant na camada de aplicação — que funcionam e
+seguem valendo —, mas a segunda barreira prometida pelos docs não existia.
+
+Três falhas sobrepostas, cada uma suficiente para anular as políticas:
+
+1. **A aplicação conecta como superuser/owner.** Superuser ignora RLS sempre;
+   owner ignora a menos que a tabela declare `FORCE ROW LEVEL SECURITY` — e
+   nenhuma declarava.
+2. **A política tinha fallback permissivo.** `COALESCE(NULLIF(current_setting(
+   'app.current_tenant', true), ''), tenant_id) = tenant_id`: sem tenant no
+   contexto, compara `tenant_id` com ele mesmo e libera todas as linhas.
+3. **O tenant nunca estava no contexto das queries.** O interceptor
+   `@TenantScopedRls` chamava um método `@Transactional` que abria transação
+   própria, executava `set_config(..., true)` — local à transação — e commitava
+   **antes** de o método real rodar. O setting evaporava ali.
+
+As três foram corrigidas:
+
+- **Migration 009**: `FORCE ROW LEVEL SECURITY` nas 13 tabelas com `tenant_id`;
+  políticas recriadas sem o fallback e com `WITH CHECK` (gravar linha de outro
+  tenant é recusado); role `archlens_app` (`NOSUPERUSER NOBYPASSRLS`) criado com
+  GRANTs e `ALTER DEFAULT PRIVILEGES`, sem senha embutida — a senha vem do
+  ambiente (`infra/postgres/init/02-app-role.sh` em instalação nova, `ALTER ROLE`
+  manual em upgrade, conforme o runbook §9).
+- **Runtime vs. migrations**: a aplicação conecta como `archlens_app`; o
+  Liquibase usa `ARCHLENS_MIGRATION_DB_USERNAME/PASSWORD` (owner) para DDL.
+- **Interceptor corrigido**: aplica o tenant **dentro** da transação em que as
+  queries rodam — participa da existente ou abre uma para o método.
+
+Prova com role não-superuser (SQL direto): `tenant-outro` vê 1 projeto,
+`tenant-antigo` vê o outro, **sem tenant no contexto vê 0** (antes: tudo), e
+`INSERT` com `tenant_id` alheio falha com *violates row-level security policy*.
+Na stack completa: jornada inteira verde (login → upload → ingestão → análise com
+5 riscos → PDF), cross-tenant 404 com e sem header forjado, cancelamento
+idempotente e erasure zerando banco e storage.
+
+### Gate de migração sobre dados existentes (executado)
+
+Changesets 1–4 aplicados a um banco novo, dados de dois tenants inseridos no
+schema antigo (inclusive projeto sem as colunas `status`/`file_count`, que ainda
+não existiam), e então o upgrade completo (005→009, 17 changesets) por cima:
+zero erros, totais preservados, colunas novas com default correto nas linhas
+antigas, 15 tabelas e 13 políticas ao final — e o RLS novo valendo também para
+os dados antigos.
+
+### SQLAlchemy 2.1.6 e a dependência que faltava
+
+O PR do Dependabot para SQLAlchemy 2.1.6 falhava com *"requires greenlet"*: o
+projeto usa `sqlalchemy.ext.asyncio`, mas declarava só `sqlalchemy` — na série
+2.0 o greenlet vinha de carona e na 2.1 deixou de vir. O requirements passou a
+declarar `sqlalchemy[asyncio]==2.1.6`; suíte do worker 77/77 e `pip-audit`
+limpo.
+
+### Limite conhecido
+
+O worker ainda conecta com o owner do schema (interno, sem porta publicada,
+tenant validado pelo backend antes de chegar nele). Movê-lo para um role
+restrito com contexto de tenant por sessão fica registrado como melhoria.

@@ -12,6 +12,9 @@ services:
       POSTGRES_DB: archlens
       POSTGRES_USER: archlens
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD}
+      # Senha do role sem superuser que a aplicação usa; obrigatória, sem
+      # default compartilhado, porque é o que faz o RLS por tenant valer.
+      ARCHLENS_APP_DB_PASSWORD: ${ARCHLENS_APP_DB_PASSWORD:?defina ARCHLENS_APP_DB_PASSWORD}
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
@@ -105,8 +108,12 @@ services:
     environment:
       QUARKUS_PROFILE: prod
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/archlens
-      QUARKUS_DATASOURCE_USERNAME: archlens
-      QUARKUS_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Runtime com role sem superuser: é o que faz o RLS por tenant valer.
+      QUARKUS_DATASOURCE_USERNAME: archlens_app
+      QUARKUS_DATASOURCE_PASSWORD: ${ARCHLENS_APP_DB_PASSWORD}
+      # Migrations com o owner do schema (DDL, FORCE RLS, GRANTs).
+      ARCHLENS_MIGRATION_DB_USERNAME: archlens
+      ARCHLENS_MIGRATION_DB_PASSWORD: ${POSTGRES_PASSWORD}
       RABBITMQ_HOST: rabbitmq
       RABBITMQ_PORT: 5672
       RABBITMQ_USERNAME: ${RABBITMQ_USERNAME:-archlens}

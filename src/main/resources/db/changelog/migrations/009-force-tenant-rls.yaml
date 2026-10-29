@@ -1,0 +1,147 @@
+databaseChangeLog:
+  # O RLS habilitado em 005/008 não protegia nada, por duas razões somadas:
+  #
+  # 1. A aplicação conecta com o mesmo usuário que é owner das tabelas, e no
+  #    PostgreSQL o owner ignora as políticas a menos que a tabela declare
+  #    FORCE ROW LEVEL SECURITY.
+  # 2. A política usava COALESCE(NULLIF(current_setting('app.current_tenant',
+  #    true), ''), tenant_id) = tenant_id: sem tenant no contexto, isso compara
+  #    tenant_id com ele mesmo e libera todas as linhas.
+  #
+  # O isolamento efetivo seguia vindo só dos filtros por tenant na camada de
+  # aplicação. Este changeset faz o RLS valer como segunda barreira: sem tenant
+  # no contexto nada é visível, com tenant só as linhas dele, e a manutenção
+  # que precisa cruzar tenants continua usando app.rls_bypass explicitamente.
+  - changeSet:
+      id: 009-force-row-level-security
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                t text;
+                tenant_tables text[] := ARRAY[
+                  'projects', 'analyses', 'architectural_risks', 'questions',
+                  'document_chunks', 'project_files', 'adrs', 'ingestion_status',
+                  'tenant_accounts', 'org_members', 'org_invites', 'api_keys',
+                  'tenant_webhooks'
+                ];
+              BEGIN
+                FOREACH t IN ARRAY tenant_tables LOOP
+                  EXECUTE format('ALTER TABLE %I FORCE ROW LEVEL SECURITY', t);
+                END LOOP;
+              END $$;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              DECLARE
+                t text;
+                tenant_tables text[] := ARRAY[
+                  'projects', 'analyses', 'architectural_risks', 'questions',
+                  'document_chunks', 'project_files', 'adrs', 'ingestion_status',
+                  'tenant_accounts', 'org_members', 'org_invites', 'api_keys',
+                  'tenant_webhooks'
+                ];
+              BEGIN
+                FOREACH t IN ARRAY tenant_tables LOOP
+                  EXECUTE format('ALTER TABLE %I NO FORCE ROW LEVEL SECURITY', t);
+                END LOOP;
+              END $$;
+
+  - changeSet:
+      id: 009-restrict-tenant-policies
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              -- Recria cada política sem o fallback permissivo. A cláusula
+              -- WITH CHECK impede ainda gravar linha de outro tenant.
+              DO $$
+              DECLARE
+                r record;
+                policy_sql text;
+                tenant_policies text[][] := ARRAY[
+                  ARRAY['projects', 'tenant_access_projects'],
+                  ARRAY['analyses', 'tenant_access_analyses'],
+                  ARRAY['architectural_risks', 'tenant_access_risks'],
+                  ARRAY['questions', 'tenant_access_questions'],
+                  ARRAY['document_chunks', 'tenant_access_chunks'],
+                  ARRAY['project_files', 'tenant_access_files'],
+                  ARRAY['adrs', 'tenant_access_adrs'],
+                  ARRAY['ingestion_status', 'tenant_access_ingestion'],
+                  ARRAY['tenant_accounts', 'tenant_access_tenant_accounts'],
+                  ARRAY['org_members', 'tenant_access_org_members'],
+                  ARRAY['org_invites', 'tenant_access_org_invites'],
+                  ARRAY['api_keys', 'tenant_access_api_keys'],
+                  ARRAY['tenant_webhooks', 'tenant_access_tenant_webhooks']
+                ];
+                i int;
+              BEGIN
+                FOR i IN 1 .. array_length(tenant_policies, 1) LOOP
+                  EXECUTE format('DROP POLICY IF EXISTS %I ON %I',
+                                 tenant_policies[i][2], tenant_policies[i][1]);
+                  EXECUTE format($f$
+                    CREATE POLICY %I ON %I
+                      USING (
+                        current_setting('app.rls_bypass', true) = 'on'
+                        OR current_setting('app.current_tenant', true) = tenant_id
+                      )
+                      WITH CHECK (
+                        current_setting('app.rls_bypass', true) = 'on'
+                        OR current_setting('app.current_tenant', true) = tenant_id
+                      )
+                  $f$, tenant_policies[i][2], tenant_policies[i][1]);
+                END LOOP;
+              END $$;
+
+  # FORCE e política restritiva só têm efeito para um usuário que não seja
+  # superuser: o superuser ignora RLS sempre, e o owner ignora sem FORCE. A
+  # aplicação precisa conectar com este role, enquanto as migrations continuam
+  # rodando com o owner (quarkus.liquibase.username).
+  #
+  # O role é criado sem senha: ela é definida no provisionamento
+  # (infra/postgres/init/02-app-role.sh em instalação nova, ou ALTER ROLE à mão
+  # num upgrade), para não embutir segredo compartilhado no repositório.
+  - changeSet:
+      id: 009-create-application-role
+      author: archlens
+      changes:
+        - sql:
+            splitStatements: false
+            sql: |
+              DO $$
+              BEGIN
+                IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'archlens_app') THEN
+                  CREATE ROLE archlens_app LOGIN NOSUPERUSER NOBYPASSRLS NOCREATEDB NOCREATEROLE;
+                ELSE
+                  -- Garante que um role pré-existente não burle o RLS.
+                  ALTER ROLE archlens_app NOSUPERUSER NOBYPASSRLS;
+                END IF;
+              END $$;
+
+              GRANT USAGE ON SCHEMA public TO archlens_app;
+              GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO archlens_app;
+              GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO archlens_app;
+
+              -- Tabelas e sequências criadas por migrations futuras já nascem
+              -- acessíveis ao role da aplicação.
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO archlens_app;
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                GRANT USAGE, SELECT ON SEQUENCES TO archlens_app;
+      rollback:
+        - sql:
+            splitStatements: false
+            sql: |
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                REVOKE SELECT, INSERT, UPDATE, DELETE ON TABLES FROM archlens_app;
+              ALTER DEFAULT PRIVILEGES IN SCHEMA public
+                REVOKE USAGE, SELECT ON SEQUENCES FROM archlens_app;
+              REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM archlens_app;
+              REVOKE ALL ON ALL TABLES IN SCHEMA public FROM archlens_app;
+              REVOKE USAGE ON SCHEMA public FROM archlens_app;
