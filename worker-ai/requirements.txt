@@ -1,11 +1,11 @@
 fastapi==0.162.0
 uvicorn[standard]==0.54.0
-psycopg[binary]==3.2.3
+psycopg[binary]==3.3.6
 pgvector==0.3.6
 sqlalchemy[asyncio]==2.1.6
-httpx==0.28.0
-tiktoken==0.8.0
-pydantic==2.10.0
-pydantic-settings==2.6.0
+httpx==0.28.1
+tiktoken==0.14.0
+pydantic==2.14.1
+pydantic-settings==2.16.1
 python-dotenv==1.2.2
 structlog==24.4.0

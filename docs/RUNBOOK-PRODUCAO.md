@@ -202,15 +202,25 @@ precisam existir juntas:
    que cruza tenants usa `app.rls_bypass` explicitamente.
 
 **Upgrade de instalação existente:** a migration 009 cria o role e os GRANTs,
-mas **sem senha** — defini-la é passo manual, para não existir segredo padrão:
+mas **sem senha** — defini-la é passo manual, para não existir segredo padrão.
+Use o script, que faz isso e **verifica** o resultado:
 
-```sql
-ALTER ROLE archlens_app PASSWORD '<a mesma de ARCHLENS_APP_DB_PASSWORD>';
+```bash
+# 1. suba o backend 0.4.0 uma vez, para o Liquibase aplicar a migration 009
+# 2. defina a senha e comprove o isolamento:
+ARCHLENS_APP_DB_PASSWORD='<segredo>' ./scripts/upgrade-rls-app-role.sh
+# 3. coloque a mesma senha no ambiente do backend e reinicie
 ```
 
-Depois exporte `ARCHLENS_APP_DB_PASSWORD` e suba o backend (que passa a conectar
-como `archlens_app`). Em instalação nova, `infra/postgres/init/02-app-role.sh`
-define a senha a partir do ambiente na criação do cluster.
+O script é idempotente e sai com código distinto por situação: `0` upgrade
+verificado, `1` falha (ex.: FORCE ausente, ou gravação alheia aceita), `2`
+inconclusivo (migration 009 ainda não aplicada, Postgres fora do ar, senha não
+informada). Ele confirma, com o próprio role da aplicação, que sem tenant no
+contexto nenhuma linha é visível, que com tenant vê exatamente as dele, e que
+gravar em outro tenant é recusado pela política.
+
+Em instalação nova, `infra/postgres/init/02-app-role.sh` define a senha a partir
+do ambiente na criação do cluster, e o script acima serve como verificação.
 
 **Limite conhecido:** o worker ainda conecta com o owner (ele é interno, sem
 porta publicada, e recebe o tenant validado pelo backend); movê-lo para um role
