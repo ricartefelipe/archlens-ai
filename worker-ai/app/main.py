@@ -38,7 +38,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="ArchLens AI Worker", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="ArchLens AI Worker", version="0.4.1", lifespan=lifespan)
 
 _ingest_status_repository = IngestStatusRepository()
 
