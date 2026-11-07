@@ -2,7 +2,7 @@ fastapi==0.162.0
 uvicorn[standard]==0.54.0
 psycopg[binary]==3.3.6
 pgvector==0.3.6
-sqlalchemy[asyncio]==2.1.6
+sqlalchemy[asyncio]==2.1.7
 httpx==0.28.1
 tiktoken==0.14.0
 pydantic==2.14.1
