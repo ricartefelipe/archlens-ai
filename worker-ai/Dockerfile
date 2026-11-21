@@ -7,7 +7,7 @@
 #   docker pull python:3.12-alpine && \
 #     docker inspect python:3.12-alpine --format '{{index .RepoDigests 0}}'
 # Fixar digest não corrige CVE: reconstrua a imagem após atualizar o digest.
-FROM python:3.12-alpine@sha256:5789aa194f757888f41fa3d48e14b6feaa1b57c0af0b56fcb1372d6474d3bff0
+FROM python:3.15-alpine@sha256:0f9552bb28711333da16915ec146f5e6bb44a7fdac9ced15dc17c2e0206346dd
 
 WORKDIR /app
 
